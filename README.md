@@ -87,17 +87,24 @@ basit-arabic-engine/
 │   ├── transfer.ts            # value-transfer console report
 │   ├── index.ts               # every public export
 │   └── main.ts                # console demo + interactive session
-└── tests/
-    ├── alphabet.test.ts
-    ├── text.test.ts
-    ├── abjad.test.ts
-    ├── mirror.test.ts
-    ├── rtl.test.ts
-    ├── interactive.test.ts
-    └── transfer.test.ts
+│
+├── tests/
+│   ├── alphabet.test.ts
+│   ├── text.test.ts
+│   ├── abjad.test.ts
+│   ├── mirror.test.ts
+│   ├── rtl.test.ts
+│   ├── interactive.test.ts
+│   └── transfer.test.ts
+│
+└── web/                       # the React interface
+    ├── index.html
+    ├── vite.config.ts
+    └── src/
 ```
 
-The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`).
+The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`)
+and from the web interface (`web/`).
 
 ---
 
@@ -372,6 +379,47 @@ engine.findCharacterByValue(20, "custom");  // "ح"
 ```
 
 In the interactive session the same report is available as `/transfer [source] [target]`.
+
+---
+
+## Web interface
+
+A React interface for the whole engine lives in `web/`.
+
+```bash
+npm run web:install   # once — installs the app's own dependencies
+npm run web:dev       # http://localhost:5173
+npm run web:build     # production bundle in web/dist
+```
+
+The app imports the library **source** through a Vite alias, so changes to the engine show
+up in the browser immediately — no rebuild in between. That works because the library uses
+no Node APIs; the same code runs in the terminal, in the browser and in a future REST layer.
+
+```text
+web/
+├── index.html
+├── vite.config.ts      # alias → ../src/index.ts
+└── src/
+    ├── main.tsx
+    ├── App.tsx         # shell: input, alphabet picker, tabs
+    ├── lib/engine.ts   # the shared engine instance
+    ├── components/     # one panel per feature
+    └── styles.css
+```
+
+Five sections, all driven by the same engine:
+
+| Section | What it shows |
+| --- | --- |
+| نقل القيم | the value-transfer report, step by step |
+| الحساب | total, per-word values, per-character values, mirrors and positions |
+| المرايا | the mirrored text in both systems, and the round-trip check |
+| التحليل | frequencies, distinct characters, duplicate removal |
+| الأنظمة | the letters, values and mirrors of a registered system |
+
+The tables are laid out right-to-left with a fixed column grid, so a value lines up under
+the letter it belongs to **across** tables — the same alignment the console report has.
 
 ---
 
