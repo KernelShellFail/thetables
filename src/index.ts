@@ -61,6 +61,8 @@ export type {
   ArabicEngineOptions,
   CharacterAnalysis,
   CharacterValue,
+  CountRuleGroup,
+  CountRuleResult,
   DuplicateResult,
   FrequencyEntry,
   LetterMirror,

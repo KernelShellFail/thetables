@@ -186,6 +186,8 @@ new ArabicEngine({ alphabets: [myConfig] });         // built-ins + extras
 | `transferValues(text, source, target): ValueTransferResult` | Carries a text from one alphabet to another by value |
 | `mirrorPair(text, first?, second?): MirrorPairResult` | The mirrors in two systems, and the two rows interleaved |
 | `interleave(first, second): string` | Merges two texts, one letter from each in turn |
+| `countRule(text, steps?): CountRuleResult` | The letters at every N-th position, counting from the right |
+| `selectEveryNth(text, step): string[]` | One step of that rule on its own |
 | `mirror(text, name): string` | Mirrors every character |
 | `mirrorCharacter(char, name): string` | Mirrors one character |
 | `mirrorWords(text, name): string[]` | Mirrors each word |
@@ -353,9 +355,16 @@ npm run transfer -- "كعبه كهان هي"
 | 4 · the `custom` letter with the same value | `ح ن و ع س ف ق` |
 | 5 · the mirrors of that result | `ت غ ر ب ا ج ه` (standard) · `ه و ن ر ص ث ط` (custom) |
 | 6 · the two mirror rows interleaved | `ت ه غ و ر ن ب ر ا ص ج ث ه ط` |
+| 7 · the 4-7-9 rule, counting from the right | `4 → و ر ث` · `7 → ب ط` · `9 → ا` |
+| 8 · the standard mirror of what was found | `ر و ط ع ث س` |
 
 Step 6 takes one letter from the first mirror row, one from the second, and repeats — so
 the merged row alternates between the two systems.
+
+Step 7 applies the **4-7-9 rule** to the merged row: counting from the right, the 4th,
+8th and 12th letters, then the 7th and 14th, then the 9th. Step 8 mirrors the six found
+letters in the standard system — and the table lines the two up, so every mirror sits
+directly under the letter it mirrors.
 
 Every row is laid out right-to-left with the columns aligned, so the value under a letter
 really is that letter's value:
@@ -394,6 +403,19 @@ pair.secondLetters; // ["ه", "و", "ن", "ر", "ص", "ث", "ط"]
 pair.merged;        // ["ت", "ه", "غ", "و", "ر", "ن", "ب", "ر", "ا", "ص", "ج", "ث", "ه", "ط"]
 
 engine.interleave("abc", "123"); // "a1b2c3" — whitespace is ignored
+```
+
+The counting rule — every N-th letter, counting from the right:
+
+```typescript
+const rule = engine.countRule("تهغورنبراصجثهط"); // the 4-7-9 rule
+
+rule.groups[0]?.letters; // ["و", "ر", "ث"]  — 4th, 8th, 12th from the right
+rule.groups[1]?.letters; // ["ب", "ط"]       — 7th, 14th
+rule.groups[2]?.letters; // ["ا"]            — 9th
+rule.letters;           // ["و", "ر", "ث", "ب", "ط", "ا"]
+
+engine.selectEveryNth("تهغورنبراصجثهط", 4); // ["و", "ر", "ث"]
 ```
 
 In the interactive session the same report is available as `/transfer [source] [target]`.
@@ -480,7 +502,7 @@ package and never re-implement the tables.
 npm test
 ```
 
-The suite (255 tests) verifies the **original data**, not the implementation: the expected
+The suite (267 tests) verifies the **original data**, not the implementation: the expected
 value and mirror tables are written out literally inside the test files, so a wrong mapping
 in `src/data/*` fails the tests. Covered:
 
@@ -502,6 +524,7 @@ in `src/data/*` fails the tests. Covered:
 15. every interactive command, its output, and the table renderer in both directions
 16. the value transfer: characters, values, matched letters, mirrors in both systems,
     the interleaved mirror row, and the column alignment of the report
+17. the 4-7-9 counting rule, and the standard mirror of what it finds
 
 ---
 

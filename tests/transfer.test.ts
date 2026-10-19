@@ -120,6 +120,74 @@ describe("TextProcessor · interleave", () => {
   });
 });
 
+describe("TextProcessor · everyNthFromRight", () => {
+  const processor = new TextProcessor();
+
+  it("takes the 4th, 8th and 12th letter", () => {
+    expect(processor.everyNthFromRight("تهغورنبراصجثهط", 4)).toEqual([
+      "و",
+      "ر",
+      "ث"
+    ]);
+  });
+
+  it("takes the 7th and 14th letter", () => {
+    expect(processor.everyNthFromRight("تهغورنبراصجثهط", 7)).toEqual(["ب", "ط"]);
+  });
+
+  it("takes the 9th letter", () => {
+    expect(processor.everyNthFromRight("تهغورنبراصجثهط", 9)).toEqual(["ا"]);
+  });
+
+  it("counts the letters, ignoring whitespace", () => {
+    expect(processor.everyNthFromRight("ت ه غ و ر ن ب ر ا ص ج ث ه ط", 4)).toEqual([
+      "و",
+      "ر",
+      "ث"
+    ]);
+  });
+
+  it("returns nothing when the text is shorter than the step", () => {
+    expect(processor.everyNthFromRight("abc", 4)).toEqual([]);
+    expect(processor.everyNthFromRight("", 1)).toEqual([]);
+  });
+
+  it("rejects a step that is not a positive integer", () => {
+    expect(() => processor.everyNthFromRight("abc", 0)).toThrow(RangeError);
+    expect(() => processor.everyNthFromRight("abc", -2)).toThrow(RangeError);
+    expect(() => processor.everyNthFromRight("abc", 1.5)).toThrow(RangeError);
+  });
+});
+
+describe("ArabicEngine · countRule", () => {
+  it("applies the 4-7-9 rule to the merged row", () => {
+    const rule = engine.countRule("تهغورنبراصجثهط");
+
+    expect(rule.groups).toEqual([
+      { step: 4, letters: ["و", "ر", "ث"] },
+      { step: 7, letters: ["ب", "ط"] },
+      { step: 9, letters: ["ا"] }
+    ]);
+    expect(rule.letters).toEqual(["و", "ر", "ث", "ب", "ط", "ا"]);
+    expect(rule.letters.join(" ")).toBe("و ر ث ب ط ا");
+  });
+
+  it("takes the standard mirror of what it found", () => {
+    const rule = engine.countRule("تهغورنبراصجثهط");
+    expect(engine.mirror(rule.letters.join(" "), "standard")).toBe("ر و ط ع ث س");
+  });
+
+  it("accepts other steps", () => {
+    const rule = engine.countRule("تهغورنبراصجثهط", [1, 2]);
+    expect(rule.groups[0]?.letters).toHaveLength(14);
+    expect(rule.groups[1]?.letters).toHaveLength(7);
+  });
+
+  it("exposes the single step on the engine", () => {
+    expect(engine.selectEveryNth("تهغورنبراصجثهط", 4)).toEqual(["و", "ر", "ث"]);
+  });
+});
+
 describe("ArabicEngine · mirrorPair", () => {
   it("returns both mirror rows and their merge", () => {
     const pair = engine.mirrorPair("ح ن و ع س ف ق");
@@ -151,6 +219,7 @@ describe("ArabicEngine · mirrorPair", () => {
 describe("transferLines · step by step report", () => {
   const lines = transferLines(engine, INPUT, "standard", "custom");
   const plain = lines.map((line) => stripBidiControls(line));
+  const trimmed = plain.map((line) => line.trimEnd());
 
   /** A data row: cells padded to four columns, then the reserved label slot. */
   const row = (cells: readonly string[], label = ""): string =>
@@ -185,6 +254,30 @@ describe("transferLines · step by step report", () => {
       .map((cell) => cell.padEnd(3))
       .join(" ") + " ";
     expect(plain).toContain(merged);
+  });
+
+  it("shows the counting rule and its result on one line", () => {
+    // The step sits in the first column, the found letters follow it, and the
+    // combined line keeps the same column as the letters of the groups.
+    const ruleRow = (cells: readonly string[]): string =>
+      Array.from({ length: 7 }, (_, index) =>
+        (cells[index] ?? "").padEnd(4)
+      )
+        .join(" ")
+        .trimEnd();
+
+    expect(trimmed).toContain(ruleRow(["4", "و", "ر", "ث"]));
+    expect(trimmed).toContain(ruleRow(["7", "ب", "ط"]));
+    expect(trimmed).toContain(ruleRow(["9", "ا"]));
+    expect(trimmed).toContain(ruleRow(["", "و", "ر", "ث", "ب", "ط", "ا"]));
+  });
+
+  it("shows the standard mirror of the found characters", () => {
+    const mirrorRow = ["", "ر", "و", "ط", "ع", "ث", "س"]
+      .map((cell) => cell.padEnd(4))
+      .join(" ")
+      .trimEnd();
+    expect(trimmed).toContain(mirrorRow);
   });
 
   it("keeps every data row the same width so the columns stay aligned", () => {

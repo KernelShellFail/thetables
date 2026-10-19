@@ -14,3 +14,6 @@ export const REFERENCE_TEXT = "بسم الله الرحمن الرحيم";
 
 /** Names of the built-in systems, in registration order. */
 export const ALPHABET_NAMES = engine.listAlphabetNames();
+
+/** The steps of the counting rule applied to the merged row. */
+export const RULE_STEPS: readonly number[] = [4, 7, 9];

@@ -3,6 +3,7 @@ import type {
   AlphabetInfo,
   ArabicEngineOptions,
   CharacterValue,
+  CountRuleResult,
   DuplicateResult,
   FrequencyEntry,
   MirrorPairResult,
@@ -251,6 +252,44 @@ export class ArabicEngine {
    */
   interleave(first: string, second: string): string {
     return this.#text.interleave(first, second);
+  }
+
+  /**
+   * The letters at every `step`-th position of a text, counting from the
+   * right.
+   */
+  selectEveryNth(text: string, step: number): string[] {
+    return this.#text.everyNthFromRight(text, step);
+  }
+
+  /**
+   * Applies a counting rule: for every step, the letters at every `step`-th
+   * position, counting from the right.
+   *
+   * The 4-7-9 rule on the merged row of the reference example:
+   *
+   * ```typescript
+   * const rule = engine.countRule("تهغورنبراصجثهط");
+   * rule.groups[0]?.letters; // ["و", "ر", "ث"]
+   * rule.groups[1]?.letters; // ["ب", "ط"]
+   * rule.groups[2]?.letters; // ["ا"]
+   * rule.letters;           // ["و", "ر", "ث", "ب", "ط", "ا"]
+   * ```
+   */
+  countRule(
+    text: string,
+    steps: readonly number[] = [4, 7, 9]
+  ): CountRuleResult {
+    const groups = steps.map((step) => ({
+      step,
+      letters: this.#text.everyNthFromRight(text, step)
+    }));
+
+    return {
+      text,
+      groups,
+      letters: groups.flatMap((group) => group.letters)
+    };
   }
 
   /**

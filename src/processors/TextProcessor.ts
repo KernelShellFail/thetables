@@ -123,6 +123,37 @@ export class TextProcessor {
   }
 
   /**
+   * The letters at every `step`-th position, counting from the right.
+   *
+   * Arabic is read from the right, so the first letter of a text is the first
+   * one read; this returns the letters at the 4th, 8th, 12th … positions when
+   * `step` is 4, and so on.
+   *
+   * ```typescript
+   * everyNthFromRight("تهغورنبراصجثهط", 4); // ["و", "ر", "ث"]
+   * ```
+   */
+  everyNthFromRight(text: string, step: number): string[] {
+    if (!Number.isInteger(step) || step < 1) {
+      throw new RangeError(
+        `Step must be a positive integer, received ${String(step)}.`
+      );
+    }
+
+    const letters = toCharacters(text).filter(
+      (character) => !isWhitespace(character)
+    );
+    const selected: string[] = [];
+
+    for (let index = step - 1; index < letters.length; index += step) {
+      const letter = letters[index];
+      if (letter !== undefined) selected.push(letter);
+    }
+
+    return selected;
+  }
+
+  /**
    * Merges two texts by taking one letter from the first, then one from the
    * second, and repeating.
    *

@@ -399,6 +399,11 @@ body {
   color: var(--accent-text);
 }
 
+.strong {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
 .arrow {
   color: var(--muted);
 }

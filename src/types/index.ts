@@ -171,3 +171,21 @@ export interface MirrorPairResult {
   /** The two mirror rows interleaved. */
   readonly merged: readonly string[];
 }
+
+/** The letters found by one step of a counting rule. */
+export interface CountRuleGroup {
+  /** The step itself, e.g. `4` in the 4-7-9 rule. */
+  readonly step: number;
+  /** The letters at every `step`-th position, counting from the right. */
+  readonly letters: readonly string[];
+}
+
+/** The result of a counting rule such as the 4-7-9 rule. */
+export interface CountRuleResult {
+  /** The text the rule was applied to. */
+  readonly text: string;
+  /** One group per step, in the order the steps were given. */
+  readonly groups: readonly CountRuleGroup[];
+  /** All the found letters, groups in order. */
+  readonly letters: readonly string[];
+}

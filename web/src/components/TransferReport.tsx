@@ -1,4 +1,4 @@
-import { engine } from "../lib/engine";
+import { engine, RULE_STEPS } from "../lib/engine";
 import { Grid, Step } from "./Layout";
 
 /**
@@ -15,6 +15,8 @@ export function TransferReport({ text }: { readonly text: string }) {
   const result = engine.transferValues(text, "standard", "custom");
   const targetText = result.targets.join(" ");
   const pair = engine.mirrorPair(targetText);
+  const rule = engine.countRule(pair.merged.join(" "), RULE_STEPS);
+  const ruleMirror = engine.mirror(rule.letters.join(" "), "standard").split(" ");
 
   return (
     <div className="stack">
@@ -102,6 +104,53 @@ export function TransferReport({ text }: { readonly text: string }) {
         <p className="note">
           حرف من مرآة {pair.first} ثم حرف من مرآة {pair.second}، بالترتيب.
         </p>
+      </Step>
+
+      <Step number={7} title="قاعدة ٤-٧-٩ (العدّ من اليمين)">
+        <Grid
+          className="grid--fixed"
+          rows={[
+            ...rule.groups.map((group) => [
+              <span key="s" className="num strong">
+                {group.step}
+              </span>,
+              ...group.letters.map((letter) => (
+                <span key={letter} className="letter">
+                  {letter}
+                </span>
+              ))
+            ]),
+            [
+              <span key="gap" />,
+              ...rule.letters.map((letter) => (
+                <span key={letter} className="letter">
+                  {letter}
+                </span>
+              ))
+            ]
+          ]}
+        />
+        <p className="note">
+          العدّ من اليمين: الحرف الرابع والثامن والثاني عشر، ثم السابع والرابع
+          عشر، ثم التاسع.
+        </p>
+      </Step>
+
+      <Step number={8} title="المرآة القياسية للمجموع">
+        <Grid
+          className="grid--fixed"
+          rows={[
+            [
+              <span key="gap" />,
+              ...ruleMirror.map((letter) => (
+                <span key={letter} className="letter">
+                  {letter}
+                </span>
+              ))
+            ]
+          ]}
+        />
+        <p className="note">مرآة نظام standard للمجموع: {rule.letters.join(" ")}</p>
       </Step>
     </div>
   );

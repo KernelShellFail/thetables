@@ -26,6 +26,9 @@ import {
 /** Text an interactive session starts with. */
 export const REFERENCE_TEXT = "بسم الله الرحمن الرحيم";
 
+/** The steps of the counting rule applied to the merged row. */
+export const RULE_STEPS: readonly number[] = [4, 7, 9];
+
 /** Characters that would otherwise be invisible, mapped to visible stand-ins. */
 const VISIBLE_STAND_INS = new Map<string, string>([
   [" ", "␣"],
@@ -221,6 +224,24 @@ export function transferLines(
     cellWidth: 3
   });
 
+  // The counting rule reads the merged row from the right.
+  const rule = engine.countRule(pair.merged.join(" "), RULE_STEPS);
+  const ruleMirror = engine.mirror(rule.letters.join(" "), "standard");
+
+  // One table for the rule: the step sits in the first column, on the right,
+  // and the found letters follow it. The combined line keeps the same column
+  // as the letters of the groups.
+  const ruleRows = renderAlignedTable([
+    ...rule.groups.map((group) => ({
+      cells: [String(group.step), ...group.letters]
+    })),
+    { cells: ["", ...rule.letters] }
+  ]);
+
+  const mirrorRows = renderAlignedTable([
+    { cells: ["", ...ruleMirror.split(" ")] }
+  ]);
+
   return [
     heading("1 · المدخل"),
     isolateRtl(input),
@@ -242,7 +263,13 @@ export function transferLines(
     rows[7] ?? "",
     "",
     heading("6 · الدمج (تتناوب بين المرآتين)"),
-    merged[0] ?? ""
+    merged[0] ?? "",
+    "",
+    heading("7 · قاعدة ٤-٧-٩ (العدّ من اليمين)"),
+    ...ruleRows,
+    "",
+    heading("8 · المرآة القياسية للمجموع"),
+    ...mirrorRows
   ];
 }
 
