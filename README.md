@@ -24,6 +24,15 @@ npm test         # run the test suite with Vitest
 
 Other scripts: `npm start` (run the built demo), `npm run typecheck`, `npm run test:watch`.
 
+```bash
+npm start -- -i    # interactive Arabic session
+npm start -- -h    # command overview
+```
+
+> On Windows, run in a UTF-8 console (Windows Terminal, or `chcp 65001` first),
+> otherwise Arabic appears garbled. Both apps print a reminder when they detect
+> a non-Windows-Terminal console.
+
 ---
 
 ## Quick start
@@ -69,14 +78,18 @@ basit-arabic-engine/
 │   ├── types/
 │   │   └── index.ts           # all shared interfaces and type aliases
 │   ├── utils/
-│   │   └── unicode.ts         # code-point helpers
+│   │   ├── unicode.ts         # code-point helpers
+│   │   └── rtl.ts             # bidirectional (right-to-left) helpers
+│   ├── interactive.ts         # Arabic presentation + REPL commands (pure)
 │   ├── index.ts               # every public export
-│   └── main.ts                # console demonstration
+│   └── main.ts                # console demo + interactive session
 └── tests/
     ├── alphabet.test.ts
     ├── text.test.ts
     ├── abjad.test.ts
-    └── mirror.test.ts
+    ├── mirror.test.ts
+    ├── rtl.test.ts
+    └── interactive.test.ts
 ```
 
 The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`).
@@ -220,6 +233,92 @@ unknown letters pass through unchanged, and because mirrors are stored in both d
 
 ---
 
+## Right-to-left (RTL) text
+
+Arabic is written right to left, but **a JavaScript string is always stored in logical
+order** — the order the characters are typed and read. That is the only order in which values,
+mirrors and duplicate detection are correct, so the engine never reverses text for
+calculation. Typing or pasting Arabic needs no conversion: the keyboard layout or IME handles
+the direction, and the text arrives in logical order.
+
+What does need handling is **display**. When Arabic sits next to Latin text, digits or
+brackets in one line, the Unicode bidirectional algorithm has to guess how they interleave —
+and it guesses wrong often enough to be noticed (a closing `)` jumps to the far end of the
+line). `utils/rtl.ts` and `interactive.ts` handle this:
+
+| Concern | Solution |
+| --- | --- |
+| A fragment reorders its neighbours | Wrap it in an isolate: `isolate()`, `isolateRtl()`, `isolateLtr()` (`RLI…PDI`, `LRI…PDI`, `FSI…PDI`) |
+| A whole row should read right to left | The Arabic name goes on the right and the value flows left, via `isolateRtl()` |
+| Which direction is this text? | `firstStrongDirection()`, `isRtlText()`, `isRtlCharacter()` |
+| Spaces and directional marks are invisible | `␣`, `‹RLM›`, `‹ZWNJ›` stand-ins in `placeholder()` / `formatRun()` |
+| Column order for an Arabic reader | `renderTable(..., { rightToLeft: true })` puts the first column on the right |
+| Text captured in *visual* order | `toVisualOrder()` converts glyph order back to logical order |
+
+```typescript
+import { isolateRtl, isolate, toVisualOrder } from "basit-arabic-engine";
+
+isolateRtl("عاظ سضضق");        // renders as one right-to-left run
+isolate("ب:2 س:60");          // each fragment keeps its own direction
+toVisualOrder("هللا مسب");    // "بسم الله" — only for visually-stored input
+```
+
+Two deliberate choices worth knowing:
+
+- **Tables are reversed manually, not with an RTL wrapper.** Doing both cancels out, and a
+  manual layout keeps working in terminals and editors with weak bidirectional support — so
+  a table pasted into a log file or a plain editor still reads correctly.
+- **`toVisualOrder()` is never automatic.** Applying it to text that is already logical would
+  scramble it, so it is an explicit conversion, used only for input captured in visual order.
+
+Cells are never mutated: bidi marks are meaningful for rendering, which is why
+`stripBidiControls()` exists as an explicit opt-in rather than something the engine applies
+behind your back.
+
+---
+
+## Interactive session
+
+```bash
+npm start -- -i
+```
+
+Type Arabic on its own line to set the text, then use commands. Everything is computed in
+logical order; output is laid out right to left.
+
+```text
+❯ بسم الله الرحمن الرحيم
+❯ /abjad
+── الحساب — standard ──
+بسم الله الرحمن الرحيم
+المجموع  786
+
+❯ /mirror custom
+── المرآة — custom ──
+المدخل  بسم الله الرحمن الرحيم
+المخرَج  ظصك ذغغح ذغعهكو ذغعهيك
+```
+
+| Command | Result |
+| --- | --- |
+| `/abjad [name]`, `/words [name]`, `/analyze [name]` | Total, per-word values, full report (default `standard`) |
+| `/mirror [name]` | Mirrored text, showing input and output |
+| `/dedup`, `/unique`, `/freq`, `/reverse` | Duplicate removal with details, distinct characters, frequency table, reversal |
+| `/alphabets`, `/info <name>` | Registry listing; letters, values and mirrors as right-to-left tables |
+| `/set <text>`, `/clear` | Replace or empty the session text |
+| `/visual` | Visual-order reading of the text, labelled as a diagnostic |
+| `/help`, `/quit` | Command list; leave (`Ctrl+C` or `Ctrl+D` also work) |
+
+The same pieces are importable, so a web, REST or desktop interface can reuse them without
+touching the engine:
+
+```typescript
+import { ArabicEngine, formatRun, renderTable } from "basit-arabic-engine";
+import { executeCommand } from "basit-arabic-engine/dist/interactive.js"; // or your own UI layer
+```
+
+---
+
 ## Extending
 
 **Register another system** — no existing class needs to change:
@@ -259,7 +358,7 @@ package and never re-implement the tables.
 npm test
 ```
 
-The suite (171 tests) verifies the **original data**, not the implementation: the expected
+The suite (223 tests) verifies the **original data**, not the implementation: the expected
 value and mirror tables are written out literally inside the test files, so a wrong mapping
 in `src/data/*` fails the tests. Covered:
 
@@ -276,6 +375,9 @@ in `src/data/*` fails the tests. Covered:
 11. correct, non-substituted handling of `ى` versus `ي`
 12. the reference input `"بسم الله الرحمن الرحيم"` = **786** in the standard system
     (102 + 66 + 329 + 289) and 1260 in the custom system
+13. bidirectional helpers: direction detection, isolation, bidi-mark stripping
+14. visual-order conversion, including round-trips and mixed Latin/Arabic runs
+15. every interactive command, its output, and the table renderer in both directions
 
 ---
 

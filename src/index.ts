@@ -33,6 +33,28 @@ export {
   toCodePoints
 } from "./utils/unicode.js";
 
+export {
+  ALM,
+  FSI,
+  LRM,
+  LRI,
+  PDI,
+  RLM,
+  RLI,
+  firstStrongDirection,
+  hasBidiControls,
+  isBidiControl,
+  isRtlCharacter,
+  isRtlText,
+  isolate,
+  isolateLtr,
+  isolateRtl,
+  stripBidiControls,
+  toVisualOrder
+} from "./utils/rtl.js";
+
+export type { Direction } from "./utils/rtl.js";
+
 export type {
   AlphabetConfig,
   AlphabetInfo,

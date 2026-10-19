@@ -1,123 +1,190 @@
 /**
- * Console demonstration of every core operation.
+ * Console demonstration and interactive session.
  *
- * Run with `npm run dev` (watch mode) or `npm run build && npm start`.
- * The library itself never touches Node APIs; only this demo does.
+ * Run with:
+ *   npm run dev / npm start              → demonstration of every operation
+ *   npm start -- -i                      → interactive Arabic session
+ *
+ * The library never touches Node APIs; only this entry point does.
  */
 
+import { createInterface } from "node:readline/promises";
 import { ArabicEngine } from "./index.js";
+import {
+  REFERENCE_TEXT,
+  executeCommand,
+  formatRun,
+  helpLines,
+  placeholder,
+  renderTable
+} from "./interactive.js";
+import { isRtlText, isolateRtl, toVisualOrder } from "./utils/rtl.js";
 
-const INPUT = "بسم الله الرحمن الرحيم";
+const LABEL_WIDTH = 26;
 
-function title(text: string): void {
-  console.log(`\n=== ${text} ===`);
+/** Prints a label/value pair, oriented right-to-left when the value is Arabic. */
+function line(label: string, value: string): void {
+  const text = `${label.padEnd(LABEL_WIDTH)}${value}`;
+  console.log(isRtlText(value) ? isolateRtl(text) : text);
 }
 
-function line(label: string, value: unknown): void {
-  console.log(`${label.padEnd(34)} ${String(value)}`);
+function section(title: string): void {
+  console.log(isolateRtl(`\n── ${title} ──`));
 }
 
-function formatCharacters(characters: readonly string[]): string {
-  return characters.map((char) => (char === " " ? "␣" : char)).join(" ");
+function windowsEncodingHint(): void {
+  if (process.platform === "win32" && !process.env.WT_SESSION) {
+    console.log(
+      "ملاحظة: إذا ظهر النص العربي غير واضح، شغّل الأمر في نافذة تستخدم UTF-8 (chcp 65001 أو Windows Terminal)."
+    );
+  }
 }
 
-const engine = new ArabicEngine();
+/* ------------------------------------------------------------- demonstration */
 
-console.log("╔══════════════════════════════════════════════╗");
-console.log("║        Basit Arabic Engine — demonstration    ║");
-console.log("╚══════════════════════════════════════════════╝");
-line("Input", INPUT);
-line("Code points", engine.countCharacters(INPUT));
+function runDemo(): void {
+  const engine = new ArabicEngine();
 
-/* ------------------------------------------------------------------ registry */
+  console.log("╔══════════════════════════════════════════════╗");
+  console.log("║        Basit Arabic Engine — demonstration    ║");
+  console.log("╚══════════════════════════════════════════════╝");
+  windowsEncodingHint();
+  line("Input", REFERENCE_TEXT);
+  line("Code points", String(engine.countCharacters(REFERENCE_TEXT)));
 
-title("1. Alphabet registry");
-line("Registered alphabets", engine.listAlphabetNames().join(", "));
-line("Standard size", engine.getAlphabet("standard").size);
-line("Custom size", engine.getAlphabet("custom").size);
+  section("1. Alphabet registry");
+  line("Registered alphabets", engine.listAlphabetNames().join(", "));
+  for (const alphabet of engine.listAlphabets()) {
+    line(alphabet.name, `${alphabet.size} letters · ${alphabet.mirrorPairCount} mirror pairs`);
+  }
 
-/* ---------------------------------------------------------------- text ops */
+  section("2. Text operations");
+  line("removeDuplicates", engine.removeDuplicates("abbccdefffa"));
+  line("removeDuplicates (Arabic)", engine.removeDuplicates("بس م ب"));
+  line("uniqueCharacters", formatRun(engine.uniqueCharacters(REFERENCE_TEXT)));
+  line("reverse", engine.reverse("الرحمن"));
+  line("removeWhitespace", engine.removeWhitespace(REFERENCE_TEXT));
+  line("removePunctuation", engine.removePunctuation("مرحباً، بالعالم!"));
 
-title("2. Text operations");
-line("removeDuplicates(abbccdefffa)", engine.removeDuplicates("abbccdefffa"));
-line("removeDuplicates(life is a lie)", engine.removeDuplicates("life is a lie"));
-line("removeDuplicates(Arabic)", engine.removeDuplicates("بس م ب"));
-line("uniqueCharacters", formatCharacters(engine.uniqueCharacters(INPUT)));
-line("countCharacters", engine.countCharacters(INPUT));
-line("reverse", engine.reverse("الرحمن"));
-line("removeWhitespace", engine.removeWhitespace(INPUT));
-line("removePunctuation", engine.removePunctuation("مرحباً، بالعالم!"));
-
-const duplicates = engine.removeDuplicatesDetailed(INPUT);
-line("detailed → result", duplicates.result);
-line("detailed → removedCount", duplicates.removedCount);
-line(
-  "detailed → removed chars",
-  Array.from(duplicates.removedCharacters, ([char, count]) => `${char}×${count}`).join(" ")
-);
-
-title("3. Frequencies (top 5)");
-for (const entry of engine.frequencies(INPUT).slice(0, 5)) {
+  const duplicates = engine.removeDuplicatesDetailed(REFERENCE_TEXT);
+  line("dedupe → result", duplicates.result);
+  line("dedupe → removedCount", String(duplicates.removedCount));
   line(
-    `${formatCharacters([entry.character])}  (${(entry.ratio * 100).toFixed(1)}%)`,
-    `${entry.count}×`
+    "dedupe → removed",
+    Array.from(duplicates.removedCharacters, ([char, count]) => `${placeholder(char)}×${count}`).join(" ")
   );
+
+  section("3. Frequency report (right-to-left columns)");
+  for (const row of renderTable(
+    ["char", "count", "share"],
+    engine.frequencies(REFERENCE_TEXT).map((entry) => [
+      placeholder(entry.character),
+      String(entry.count),
+      `${(entry.ratio * 100).toFixed(1)}%`
+    ]),
+    { rightToLeft: true }
+  )) {
+    console.log(row);
+  }
+
+  section("4. Abjad totals");
+  line("standard", String(engine.calculate(REFERENCE_TEXT, "standard")));
+  line("custom", String(engine.calculate(REFERENCE_TEXT, "custom")));
+  line("unknown chars ignored", String(engine.calculate("ب1ب!", "standard")));
+
+  section("5. Word values (standard)");
+  for (const word of engine.calculateWords(REFERENCE_TEXT, "standard")) {
+    line(
+      `#${word.index} ${word.word}`,
+      `${word.value}  (${word.characters.map((char) => `${char.character}:${char.value ?? "–"}`).join(" ")})`
+    );
+  }
+
+  section("6. Mirrors");
+  line("standard", engine.mirror(REFERENCE_TEXT, "standard"));
+  line("custom", engine.mirror(REFERENCE_TEXT, "custom"));
+  line("double mirror restores", String(engine.mirror(engine.mirror(REFERENCE_TEXT, "standard"), "standard") === REFERENCE_TEXT));
+  line("visual order (display only)", toVisualOrder(REFERENCE_TEXT));
+
+  section("7. Alphabet tables (right-to-left)");
+  const info = engine.describeAlphabet("custom");
+  line("system", info.name);
+  for (const row of renderTable(
+    ["char", "value"],
+    info.entries.map(([letter, value]) => [letter, String(value)]),
+    { rightToLeft: true }
+  )) {
+    console.log(row);
+  }
+  for (const row of renderTable(
+    ["char", "mirror"],
+    info.mirroredLetters.map((letter) => [letter, info.mirrors.get(letter) ?? "—"]),
+    { rightToLeft: true }
+  )) {
+    console.log(row);
+  }
+
+  section("8. Registering your own alphabet");
+  engine.register({ name: "demo", values: [["ا", 1], ["ب", 2], ["ت", 3]], mirrors: [["ا", "ت"]] });
+  line("registered", engine.listAlphabetNames().join(", "));
+  line("mirror ابت", engine.mirror("ابت", "demo"));
+  line("value ابت", String(engine.calculate("ابت", "demo")));
+
+  console.log(isolateRtl("\nانتهى العرض — جرّب الجلسة التفاعلية: npm start -- -i\n"));
 }
 
-/* -------------------------------------------------------------------- abjad */
+/* ------------------------------------------------------- interactive session */
 
-title("4. Abjad totals");
-line("standard", engine.calculate(INPUT, "standard"));
-line("custom", engine.calculate(INPUT, "custom"));
-line("unknown characters ignored", engine.calculate("ب1ب!", "standard"));
+async function runInteractive(): Promise<void> {
+  const engine = new ArabicEngine();
+  let text = REFERENCE_TEXT;
 
-title("5. Word values (standard)");
-for (const word of engine.calculateWords(INPUT, "standard")) {
-  line(
-    `#${word.index} ${word.word}`,
-    `${word.value}  (${word.characters
-      .map((char) => `${char.character}:${char.value ?? "–"}`)
-      .join(" ")})`
-  );
+  console.log("╔══════════════════════════════════════════════╗");
+  console.log("║      Basit Arabic Engine — interactive        ║");
+  console.log("╚══════════════════════════════════════════════╝");
+  windowsEncodingHint();
+  console.log(isolateRtl("اكتب النص الذي تريد تحليله ثم اضغط Enter، أو اكتب /help."));
+  console.log(isolateRtl(`النص الحالي: ${text}`));
+  console.log();
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // No forced direction on the prompt: the paragraph direction follows what
+  // the reader types, so Latin commands and Arabic text both sit correctly.
+  rl.setPrompt("❯ ");
+
+  try {
+    rl.prompt();
+    for await (const line of rl) {
+      const result = executeCommand(engine, line, text);
+      for (const output of result.lines) console.log(output);
+      if (result.text !== undefined) text = result.text;
+      if (result.quit) break;
+      rl.prompt();
+    }
+  } finally {
+    rl.close();
+  }
+
+  console.log(isolateRtl("\nإلى اللقاء."));
 }
 
-title("6. Character values (custom)");
-for (const char of engine.breakdown("سلم", "custom")) {
-  line(char.character, char.value ?? "unknown");
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+
+  if (args.includes("-i") || args.includes("--interactive")) {
+    await runInteractive();
+    return;
+  }
+  if (args.includes("-h") || args.includes("--help")) {
+    console.log("Usage: npm start [-- -i | --interactive | -h | --help]");
+    console.log("  (default)  run the operation demonstration");
+    console.log("  -i         start the interactive Arabic session");
+    console.log();
+    console.log("Interactive commands:");
+    for (const commandLine of helpLines()) console.log(commandLine);
+    return;
+  }
+  runDemo();
 }
 
-/* ------------------------------------------------------------------- mirror */
-
-title("7. Mirrors");
-line("standard", engine.mirror(INPUT, "standard"));
-line("custom", engine.mirror(INPUT, "custom"));
-line("character ن → standard", engine.mirrorCharacter("ن", "standard"));
-line("character ى → custom", engine.mirrorCharacter("ى", "custom"));
-line(
-  "double mirror restores",
-  engine.mirror(engine.mirror(INPUT, "standard"), "standard") === INPUT
-);
-
-/* ------------------------------------------------------------ alphabet info */
-
-title("8. Alphabet information");
-const info = engine.describeAlphabet("custom");
-line("name", info.name);
-line("letters", formatCharacters(info.letters));
-line("mirror pairs", info.mirroredLetters.length / 2);
-line("unmirrored letters", formatCharacters(info.unmirroredLetters));
-line("first entry", `${info.entries[0]?.[0]} = ${info.entries[0]?.[1]}`);
-
-/* ----------------------------------------------------- custom registration */
-
-title("9. Registering your own alphabet");
-engine.register({
-  name: "demo",
-  values: [["ا", 1], ["ب", 2], ["ت", 3]],
-  mirrors: [["ا", "ت"]]
-});
-line("registered", engine.listAlphabetNames().join(", "));
-line("اب", engine.mirror("اب", "demo"));
-line("اب (value)", engine.calculate("اب", "demo"));
-
-title("Done");
+await main();
