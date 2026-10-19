@@ -7,6 +7,7 @@
 
 export { Alphabet, AlphabetError } from "./core/Alphabet.js";
 export { ArabicEngine } from "./core/ArabicEngine.js";
+export { LinkTable, LinkTableError } from "./core/LinkTable.js";
 
 export { AbjadCalculator } from "./processors/AbjadCalculator.js";
 export { MirrorProcessor } from "./processors/MirrorProcessor.js";
@@ -17,6 +18,7 @@ export {
   customMirrors,
   customValues
 } from "./data/custom.js";
+export { LINK_TABLE, linkRows } from "./data/links.js";
 export {
   standardAlphabetConfig,
   standardMirrors,
@@ -59,6 +61,7 @@ export type {
   AlphabetConfig,
   AlphabetInfo,
   ArabicEngineOptions,
+  ChainExpansion,
   CharacterAnalysis,
   CharacterValue,
   CountRuleGroup,
@@ -67,6 +70,7 @@ export type {
   FrequencyEntry,
   LetterMirror,
   LetterValue,
+  LinkTableConfig,
   MirrorPairResult,
   RemovePunctuationOptions,
   TextAnalysis,

@@ -17,6 +17,7 @@ export function TransferReport({ text }: { readonly text: string }) {
   const pair = engine.mirrorPair(targetText);
   const rule = engine.countRule(pair.merged.join(" "), RULE_STEPS);
   const ruleMirror = engine.mirror(rule.letters.join(" "), "standard").split(" ");
+  const chain = engine.expandChain(rule.letters);
 
   return (
     <div className="stack">
@@ -151,6 +152,27 @@ export function TransferReport({ text }: { readonly text: string }) {
           ]}
         />
         <p className="note">مرآة نظام standard للمجموع: {rule.letters.join(" ")}</p>
+      </Step>
+
+      <Step number={9} title="الجدول النهائي (سلسلة الحروف)">
+        <Grid
+          className="grid--fixed"
+          rows={chain.rows.map((row, rowIndex) => [
+            <span key="gap" />,
+            ...row.map((letter, columnIndex) => (
+              <span
+                key={`${rowIndex}-${columnIndex}`}
+                className={letter === undefined ? "empty" : "letter"}
+              >
+                {letter ?? ""}
+              </span>
+            ))
+          ])}
+        />
+        <p className="note">
+          الصف الأول ناتج قاعدة ٤-٧-٩، والثاني مرآته، وما بعده سلسلة كل حرف في
+          جدول الروابط. الخانات الفارغة تُترك فارغة.
+        </p>
       </Step>
     </div>
   );

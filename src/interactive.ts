@@ -242,6 +242,14 @@ export function transferLines(
     { cells: ["", ...ruleMirror.split(" ")] }
   ]);
 
+  // The final table: the found letters, their mirrors, and the chain each of
+  // them continues with in the link table. A chain that stops leaves the cell
+  // empty — no placeholder character.
+  const chain = engine.expandChain(rule.letters);
+  const chainRows = renderAlignedTable(
+    chain.rows.map((row) => ({ cells: ["", ...row.map((cell) => cell ?? "")] }))
+  );
+
   return [
     heading("1 · المدخل"),
     isolateRtl(input),
@@ -269,7 +277,10 @@ export function transferLines(
     ...ruleRows,
     "",
     heading("8 · المرآة القياسية للمجموع"),
-    ...mirrorRows
+    ...mirrorRows,
+    "",
+    heading("9 · الجدول النهائي (سلسلة الحروف)"),
+    ...chainRows
   ];
 }
 

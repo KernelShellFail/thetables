@@ -189,3 +189,30 @@ export interface CountRuleResult {
   /** All the found letters, groups in order. */
   readonly letters: readonly string[];
 }
+
+/** Raw definition of a table of letter chains. */
+export interface LinkTableConfig {
+  /** Registry key, e.g. `"links"`. */
+  readonly name: string;
+  /** The rows, in the author's original order. */
+  readonly rows: ReadonlyArray<ReadonlyArray<string>>;
+}
+
+/**
+ * A table built from a row of letters: the letters themselves, their mirrors,
+ * and the chain each letter continues with.
+ */
+export interface ChainExpansion {
+  /** The letters the table was built from. */
+  readonly heads: readonly string[];
+  /** The mirrors of the heads. */
+  readonly mirrors: readonly string[];
+  /** For each head, the chain it continues with. */
+  readonly chains: readonly (readonly string[])[];
+  /**
+   * The table as rows: the heads, then the mirrors, then one row per chain
+   * position. A position a chain does not reach is `undefined` — an empty
+   * cell, never a placeholder character.
+   */
+  readonly rows: readonly (readonly (string | undefined)[])[];
+}

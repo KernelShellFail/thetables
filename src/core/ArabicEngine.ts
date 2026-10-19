@@ -3,6 +3,7 @@ import type {
   AlphabetInfo,
   ArabicEngineOptions,
   CharacterValue,
+  ChainExpansion,
   CountRuleResult,
   DuplicateResult,
   FrequencyEntry,
@@ -13,7 +14,9 @@ import type {
   WordResult
 } from "../types/index.js";
 import { Alphabet, AlphabetError } from "./Alphabet.js";
+import { LinkTable } from "./LinkTable.js";
 import { customAlphabetConfig } from "../data/custom.js";
+import { LINK_TABLE } from "../data/links.js";
 import { standardAlphabetConfig } from "../data/standard.js";
 import { AbjadCalculator } from "../processors/AbjadCalculator.js";
 import { MirrorProcessor } from "../processors/MirrorProcessor.js";
@@ -43,6 +46,7 @@ const BUILT_IN_ALPHABETS: readonly AlphabetConfig[] = Object.freeze([
  */
 export class ArabicEngine {
   readonly #alphabets = new Map<string, Alphabet>();
+  readonly #links: LinkTable = new LinkTable(LINK_TABLE);
   readonly #text = new TextProcessor();
   readonly #abjad = new AbjadCalculator();
   readonly #mirror = new MirrorProcessor();
@@ -290,6 +294,41 @@ export class ArabicEngine {
       groups,
       letters: groups.flatMap((group) => group.letters)
     };
+  }
+
+  /** The table of letter chains. */
+  get links(): LinkTable {
+    return this.#links;
+  }
+
+  /**
+   * Builds the chain table of a row of letters: the letters, their mirrors,
+   * and the chain each letter continues with in the link table.
+   *
+   * ```typescript
+   * const table = engine.expandChain(["و", "ر", "ث", "ب", "ط", "ا"]);
+   * table.rows[0]; // ["و", "ر", "ث", "ب", "ط", "ا"]
+   * table.rows[1]; // ["ر", "و", "ط", "ع", "ث", "س"]  — the standard mirrors
+   * table.rows[2]; // ["س", "ب", "ه", "ك", "ص", "ي"]  — the first chain letter
+   * table.rows[3]; // ["خ", "ك", "ن", "ر", "ظ", "ق"]
+   * table.rows[4]; // [undefined, undefined, undefined, undefined, undefined, "غ"]
+   * ```
+   */
+  expandChain(
+    heads: readonly string[],
+    alphabetName = "standard"
+  ): ChainExpansion {
+    const alphabet = this.getAlphabet(alphabetName);
+    const mirrors = heads.map((head) => alphabet.getMirror(head) ?? head);
+    const chains = heads.map((head) => this.#links.getChain(head));
+    const depth = chains.reduce((max, chain) => Math.max(max, chain.length), 0);
+
+    const rows: (string | undefined)[][] = [[...heads], [...mirrors]];
+    for (let position = 0; position < depth; position += 1) {
+      rows.push(chains.map((chain) => chain[position]));
+    }
+
+    return { heads: [...heads], mirrors, chains, rows };
   }
 
   /**

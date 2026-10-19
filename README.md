@@ -70,6 +70,7 @@ basit-arabic-engine/
 ├── src/
 │   ├── core/
 │   │   ├── Alphabet.ts        # one alphabet system: values + mirrors
+│   │   ├── LinkTable.ts       # the table of letter chains
 │   │   └── ArabicEngine.ts    # facade / registry / public API
 │   ├── processors/
 │   │   ├── TextProcessor.ts   # duplicates, counts, frequencies, whitespace
@@ -77,7 +78,8 @@ basit-arabic-engine/
 │   │   └── MirrorProcessor.ts # character / word / sentence mirroring
 │   ├── data/
 │   │   ├── standard.ts        # System 1 — original data
-│   │   └── custom.ts          # System 2 — original data
+│   │   ├── custom.ts          # System 2 — original data
+│   │   └── links.ts           # the link table — letter chains
 │   ├── types/
 │   │   └── index.ts           # all shared interfaces and type aliases
 │   ├── utils/
@@ -95,7 +97,8 @@ basit-arabic-engine/
 │   ├── mirror.test.ts
 │   ├── rtl.test.ts
 │   ├── interactive.test.ts
-│   └── transfer.test.ts
+│   ├── transfer.test.ts
+│   └── links.test.ts
 │
 └── web/                       # the React interface
     ├── index.html
@@ -188,6 +191,8 @@ new ArabicEngine({ alphabets: [myConfig] });         // built-ins + extras
 | `interleave(first, second): string` | Merges two texts, one letter from each in turn |
 | `countRule(text, steps?): CountRuleResult` | The letters at every N-th position, counting from the right |
 | `selectEveryNth(text, step): string[]` | One step of that rule on its own |
+| `expandChain(heads, name?): ChainExpansion` | The final table: letters, mirrors, and their chains |
+| `links: LinkTable` | The table of letter chains |
 | `mirror(text, name): string` | Mirrors every character |
 | `mirrorCharacter(char, name): string` | Mirrors one character |
 | `mirrorWords(text, name): string[]` | Mirrors each word |
@@ -357,6 +362,7 @@ npm run transfer -- "كعبه كهان هي"
 | 6 · the two mirror rows interleaved | `ت ه غ و ر ن ب ر ا ص ج ث ه ط` |
 | 7 · the 4-7-9 rule, counting from the right | `4 → و ر ث` · `7 → ب ط` · `9 → ا` |
 | 8 · the standard mirror of what was found | `ر و ط ع ث س` |
+| 9 · the final chain table | see below |
 
 Step 6 takes one letter from the first mirror row, one from the second, and repeats — so
 the merged row alternates between the two systems.
@@ -365,6 +371,33 @@ Step 7 applies the **4-7-9 rule** to the merged row: counting from the right, th
 8th and 12th letters, then the 7th and 14th, then the 9th. Step 8 mirrors the six found
 letters in the standard system — and the table lines the two up, so every mirror sits
 directly under the letter it mirrors.
+
+### The link table
+
+Step 9 builds the final table. Every letter of the standard alphabet appears once in the
+link table, arranged in nine rows — a letter's row is the chain it continues with:
+
+```text
+1 → ا ي ق غ      5 → ه ن ث      9 → ط ص ظ
+2 → ب ك ر        6 → و س خ
+3 → ج ل ش        7 → ز ع ذ
+4 → د م ت        8 → ح ف ض
+```
+
+The chain of a letter is its row without the letter itself, in the order the row is
+written. So `و` continues with `س` then `خ`, while `ر` — the last letter of its row —
+continues with `ب` then `ك`. Row 1 is the only one with four letters, so only `ا` has a
+chain of three.
+
+```text
+و  ر  ث  ب  ط  ا     ← the 4-7-9 rule
+ر  و  ط  ع  ث  س     ← its standard mirror
+س  ب  ه  ك  ص  ي     ← the first letter of each chain
+خ  ك  ن  ر  ظ  ق     ← the second
+               غ     ← the third, reached only by ا
+```
+
+A cell a chain does not reach is left **empty** — never filled with a placeholder.
 
 Every row is laid out right-to-left with the columns aligned, so the value under a letter
 really is that letter's value:
@@ -417,6 +450,23 @@ rule.letters;           // ["و", "ر", "ث", "ب", "ط", "ا"]
 
 engine.selectEveryNth("تهغورنبراصجثهط", 4); // ["و", "ر", "ث"]
 ```
+
+The final chain table:
+
+```typescript
+const table = engine.expandChain(["و", "ر", "ث", "ب", "ط", "ا"]);
+
+table.rows[0]; // ["و", "ر", "ث", "ب", "ط", "ا"]
+table.rows[1]; // ["ر", "و", "ط", "ع", "ث", "س"]   — the standard mirrors
+table.rows[2]; // ["س", "ب", "ه", "ك", "ص", "ي"]   — the first chain letter
+table.rows[3]; // ["خ", "ك", "ن", "ر", "ظ", "ق"]
+table.rows[4]; // [undefined, undefined, undefined, undefined, undefined, "غ"]
+
+engine.links.getChain("و"); // ["س", "خ"] — the rest of و's row
+engine.links.getRow("ا");   // ["ا", "ي", "ق", "غ"]
+```
+
+A cell a chain does not reach is `undefined` — an empty cell, never a placeholder.
 
 In the interactive session the same report is available as `/transfer [source] [target]`.
 
@@ -502,7 +552,7 @@ package and never re-implement the tables.
 npm test
 ```
 
-The suite (267 tests) verifies the **original data**, not the implementation: the expected
+The suite (281 tests) verifies the **original data**, not the implementation: the expected
 value and mirror tables are written out literally inside the test files, so a wrong mapping
 in `src/data/*` fails the tests. Covered:
 
@@ -525,6 +575,7 @@ in `src/data/*` fails the tests. Covered:
 16. the value transfer: characters, values, matched letters, mirrors in both systems,
     the interleaved mirror row, and the column alignment of the report
 17. the 4-7-9 counting rule, and the standard mirror of what it finds
+18. the link table, its chains, and the final table with its empty cells
 
 ---
 
