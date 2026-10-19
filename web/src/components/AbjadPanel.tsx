@@ -1,4 +1,5 @@
 import { engine } from "../lib/engine";
+import { alignedText, sections } from "../lib/format";
 import { Grid, Panel, Stat } from "./Layout";
 
 /** Abjad totals: the whole text, every word, and every character. */
@@ -15,10 +16,36 @@ export function AbjadPanel({
   const known = characters.filter((entry) => entry.value !== undefined).length;
   const system = engine.getAlphabet(alphabet);
 
+  const copyText = sections(
+    [`المجموع: ${total}`, `عدد الكلمات: ${words.length}`, `أحرف معروفة: ${known}`],
+    words.length === 0
+      ? []
+      : [
+          "قيم الكلمات:",
+          alignedText(
+            words.map((word) => [word.word, String(word.value)])
+          )
+        ],
+    characters.length === 0
+      ? []
+      : [
+          "قيم الأحرف:",
+          alignedText([
+            characters.map((entry) =>
+              entry.character === " " ? "␣" : entry.character
+            ),
+            characters.map((entry) => String(entry.value ?? "—")),
+            characters.map((entry) => system.getMirror(entry.character) ?? "—"),
+            characters.map((entry) => String(system.getPosition(entry.character) ?? "—"))
+          ])
+        ]
+  );
+
   return (
     <Panel
       title="الحساب"
       hint={`النظام: ${alphabet} — القيم المعروفة تُحتسب، وما عداها يُترك بلا أثر.`}
+      copyText={copyText}
     >
       <div className="stats">
         <Stat label="المجموع" value={<span className="num big">{total}</span>} />

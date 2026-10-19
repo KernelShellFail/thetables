@@ -1,4 +1,5 @@
 import { engine } from "../lib/engine";
+import { alignedText, sections } from "../lib/format";
 import { Grid, Panel, Stat } from "./Layout";
 
 /** Frequencies, distinct characters and duplicate removal. */
@@ -17,8 +18,38 @@ export function AnalysisPanel({
     ([character, count]) => `${character === " " ? "␣" : character}×${count}`
   ).join("  ");
 
+  const copyText = sections(
+    [
+      `عدد الأحرف: ${engine.countCharacters(text)}`,
+      `أحرف فريدة: ${unique.length}`,
+      `المحذوف: ${duplicates.removedCount}`
+    ],
+    frequencies.length === 0
+      ? []
+      : [
+          "تكرار الأحرف:",
+          alignedText(
+            frequencies.map((entry) => [
+              entry.character === " " ? "␣" : entry.character,
+              String(entry.count),
+              `${(entry.ratio * 100).toFixed(1)}%`
+            ])
+          )
+        ],
+    [
+      "إزالة التكرار:",
+      `المدخل: ${text}`,
+      `الناتج: ${duplicates.result}`,
+      `المحذوف: ${removed || "لا يوجد"}`
+    ]
+  );
+
   return (
-    <Panel title="التحليل" hint={`تكرار الأحرف وإزالة التكرار في نظام ${alphabet}.`}>
+    <Panel
+      title="التحليل"
+      hint={`تكرار الأحرف وإزالة التكرار في نظام ${alphabet}.`}
+      copyText={copyText}
+    >
       <div className="stats">
         <Stat label="عدد الأحرف" value={<span className="num">{engine.countCharacters(text)}</span>} />
         <Stat label="أحرف فريدة" value={<span className="num">{unique.length}</span>} />

@@ -1,4 +1,5 @@
 import { engine } from "../lib/engine";
+import { alignedText, sections } from "../lib/format";
 import { Grid, Panel, Stat } from "./Layout";
 
 /** The registered systems: their letters, values and mirrors. */
@@ -9,10 +10,33 @@ export function AlphabetPanel({
 }) {
   const info = engine.describeAlphabet(alphabet);
 
+  const copyText = sections(
+    [
+      `نظام ${info.name}`,
+      `عدد الأحرف: ${info.size}`,
+      `أزواج المرايا: ${info.mirroredLetters.length / 2}`
+    ],
+    [
+      "الأحرف والقيم:",
+      alignedText([
+        info.entries.map(([letter]) => letter),
+        info.entries.map(([, value]) => String(value))
+      ])
+    ],
+    [
+      "المرايا:",
+      alignedText([
+        info.mirroredLetters.map((letter) => letter),
+        info.mirroredLetters.map((letter) => info.mirrors.get(letter) ?? "—")
+      ])
+    ]
+  );
+
   return (
     <Panel
       title={`نظام ${info.name}`}
       hint="الأحرف والقيم كما وردت في البيانات الأصلية — دون أي تغيير."
+      copyText={copyText}
     >
       <div className="stats">
         <Stat label="عدد الأحرف" value={<span className="num">{info.size}</span>} />

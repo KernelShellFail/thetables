@@ -104,6 +104,8 @@ basit-arabic-engine/
     ├── index.html
     ├── vite.config.ts
     └── src/
+        ├── lib/               # engine instance, clipboard, text formatting
+        └── components/        # one panel per feature
 ```
 
 The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`)
@@ -510,6 +512,29 @@ Five sections, all driven by the same engine:
 
 The tables are laid out right-to-left with a fixed column grid, so a value lines up under
 the letter it belongs to **across** tables — the same alignment the console report has.
+
+### Copying an output
+
+Every output has a copy button: one per step of the transfer report, one per panel, and
+one that copies the whole report at once. What lands on the clipboard is plain text with
+the same column layout as the screen — and without the invisible directional marks, which
+only help the rendering:
+
+```text
+و    ر    ث    ب    ط    ا
+ر    و    ط    ع    ث    س
+س    ب    ه    ك    ص    ي
+خ    ك    ن    ر    ظ    ق
+                         غ
+```
+
+The button says «تم النسخ» for a moment and then goes back to its normal state, so it
+never stays stuck. When the browser refuses the copy — a denied permission, or a page
+served over plain HTTP on a network address — the button says «تعذّر النسخ» instead of
+failing silently.
+
+The copying itself lives in `web/src/lib/clipboard.ts` and uses the asynchronous
+Clipboard API, with the older `execCommand` path as a fallback.
 
 ---
 

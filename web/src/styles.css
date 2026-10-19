@@ -124,6 +124,17 @@ body {
   gap: 14px;
 }
 
+.panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel__head .copy {
+  flex: none;
+}
+
 .panel__title {
   margin: 0;
   font-size: 1.15rem;
@@ -197,6 +208,69 @@ body {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ------------------------------------------------------------ copy button */
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.copy:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.copy:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.copy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.copy svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.copy--copied {
+  color: var(--accent-text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.copy--failed {
+  color: #b42318;
+  border-color: #f3c0bb;
+  background: #fdf1f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .copy--failed {
+    color: #ff9d94;
+    border-color: #5b2b28;
+    background: #2a1614;
+  }
 }
 
 /* ------------------------------------------------------------- composer */
@@ -290,6 +364,10 @@ body {
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.step__head .copy {
+  margin-inline-start: auto;
 }
 
 .step__number {
@@ -427,6 +505,23 @@ body {
 .breakdown {
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+.report-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.report-bar__label {
+  font-size: 0.9rem;
+  font-weight: 650;
 }
 
 /* --------------------------------------------------------------- stats */

@@ -1,4 +1,5 @@
 import { engine } from "../lib/engine";
+import { sections } from "../lib/format";
 import { Panel, Stat } from "./Layout";
 
 /** Mirroring in both supplied systems, plus the round-trip check. */
@@ -12,11 +13,20 @@ export function MirrorPanel({
   const mirrored = engine.mirror(text, alphabet);
   const restored = engine.mirror(mirrored, alphabet) === text;
   const other = alphabet === "standard" ? "custom" : "standard";
+  const otherMirrored = engine.mirror(text, other);
+
+  const copyText = sections([
+    `المدخل: ${text}`,
+    `مخرج ${alphabet}: ${mirrored}`,
+    `مخرج ${other}: ${otherMirrored}`,
+    `المرآة تعيد الأصل: ${restored ? "نعم" : "لا"}`
+  ]);
 
   return (
     <Panel
       title="المرايا"
       hint="الحروف التي لا مرآة لها تبقى كما هي، والمسافات وعلامات التشكيل لا تتغير."
+      copyText={copyText}
     >
       <div className="compare">
         <div className="compare__side">

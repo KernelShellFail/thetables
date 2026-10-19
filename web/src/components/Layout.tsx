@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
+import { CopyButton } from "./CopyButton";
 
 /** A numbered step of the value-transfer report. */
 export function Step({
   number,
   title,
+  copyText,
   children
 }: {
   readonly number: number;
   readonly title: string;
+  /** When given, the step offers a button that copies this text. */
+  readonly copyText?: string;
   readonly children: ReactNode;
 }) {
   return (
@@ -15,6 +19,9 @@ export function Step({
       <header className="step__head">
         <span className="step__number">{number}</span>
         <h3 className="step__title">{title}</h3>
+        {copyText === undefined ? null : (
+          <CopyButton text={copyText} title={`نسخ: ${title}`} />
+        )}
       </header>
       <div className="step__body">{children}</div>
     </section>
@@ -25,17 +32,25 @@ export function Step({
 export function Panel({
   title,
   hint,
+  copyText,
   children
 }: {
   readonly title: string;
   readonly hint?: string;
+  /** When given, the panel offers a button that copies this text. */
+  readonly copyText?: string;
   readonly children: ReactNode;
 }) {
   return (
     <section className="panel">
       <header className="panel__head">
-        <h2 className="panel__title">{title}</h2>
-        {hint !== undefined ? <p className="panel__hint">{hint}</p> : null}
+        <div>
+          <h2 className="panel__title">{title}</h2>
+          {hint !== undefined ? <p className="panel__hint">{hint}</p> : null}
+        </div>
+        {copyText === undefined ? null : (
+          <CopyButton text={copyText} title={`نسخ: ${title}`} />
+        )}
       </header>
       {children}
     </section>
