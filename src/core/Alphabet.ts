@@ -56,6 +56,7 @@ export class Alphabet {
   readonly #mirrorPairs: readonly LetterMirror[];
   readonly #values: ReadonlyMap<string, number>;
   readonly #positions: ReadonlyMap<string, number>;
+  readonly #charactersByValue: ReadonlyMap<number, string>;
   readonly #mirrors: ReadonlyMap<string, string>;
   readonly #mirroredLetters: readonly string[];
 
@@ -73,6 +74,7 @@ export class Alphabet {
 
     const values = new Map<string, number>();
     const positions = new Map<string, number>();
+    const charactersByValue = new Map<number, string>();
     const letters: string[] = [];
     const entries: LetterValue[] = [];
 
@@ -93,6 +95,8 @@ export class Alphabet {
       }
       values.set(letter, value);
       positions.set(letter, letters.length);
+      // First letter wins if two letters ever share a value.
+      if (!charactersByValue.has(value)) charactersByValue.set(value, letter);
       letters.push(letter);
       entries.push(Object.freeze([letter, value]));
     });
@@ -152,6 +156,7 @@ export class Alphabet {
     this.#mirroredLetters = Object.freeze(mirroredLetters);
     this.#values = values;
     this.#positions = positions;
+    this.#charactersByValue = charactersByValue;
     this.#mirrors = mirrors;
   }
 
@@ -183,6 +188,17 @@ export class Alphabet {
   /** Zero-based position of a character in the original value table. */
   getPosition(char: string): number | undefined {
     return this.#positions.get(char);
+  }
+
+  /**
+   * The letter carrying a given numerical value, or `undefined` when no letter
+   * has it.
+   *
+   * Values are unique in both supplied systems; if a custom system ever reused
+   * one, the first letter in the original order wins.
+   */
+  getCharacterByValue(value: number): string | undefined {
+    return this.#charactersByValue.get(value);
   }
 
   /** Whether the alphabet assigns a value to `char`. */

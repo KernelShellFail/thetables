@@ -7,6 +7,7 @@ import type {
   FrequencyEntry,
   RemovePunctuationOptions,
   TextAnalysis,
+  ValueTransferResult,
   WordResult
 } from "../types/index.js";
 import { Alphabet, AlphabetError } from "./Alphabet.js";
@@ -169,6 +170,56 @@ export class ArabicEngine {
   /** Value of a single character. */
   calculateCharacter(char: string, alphabetName: string): number | undefined {
     return this.#abjad.calculateCharacter(char, this.getAlphabet(alphabetName));
+  }
+
+  /** Letter of an alphabet that carries a given numerical value. */
+  findCharacterByValue(
+    value: number,
+    alphabetName: string
+  ): string | undefined {
+    return this.getAlphabet(alphabetName).getCharacterByValue(value);
+  }
+
+  /**
+   * Carries a text from one alphabet to another by numerical value.
+   *
+   * 1. whitespace is removed and repeated characters are dropped, keeping the
+   *    first occurrence;
+   * 2. every remaining character is valued in the source alphabet;
+   * 3. the target alphabet is searched for the letter that carries the same
+   *    value.
+   *
+   * ```typescript
+   * engine.transferValues("كعبه كهان هي", "standard", "custom");
+   * // characters: ك ع ب ه ا ن ي
+   * // values:    20 70 2 5 1 50 10
+   * // targets:   ح ن و ع س ف ق
+   * ```
+   */
+  transferValues(
+    text: string,
+    sourceName: string,
+    targetName: string
+  ): ValueTransferResult {
+    const source = this.getAlphabet(sourceName);
+    const target = this.getAlphabet(targetName);
+
+    const characters = this.#text.uniqueCharacters(
+      this.#text.removeWhitespace(text)
+    );
+    const values = characters.map((character) => source.getValue(character));
+    const targets = values.map((value) =>
+      value === undefined ? undefined : target.getCharacterByValue(value)
+    );
+
+    return {
+      input: text,
+      source: source.name,
+      target: target.name,
+      characters,
+      values,
+      targets
+    };
   }
 
   /** Value of every whitespace-delimited word. */

@@ -69,6 +69,68 @@ export interface TableOptions {
   readonly rightToLeft?: boolean;
 }
 
+export interface AlignedTableOptions {
+  /** Minimum width of a cell, in terminal columns. */
+  readonly cellWidth?: number;
+  /** Separator placed between two cells. */
+  readonly separator?: string;
+}
+
+export interface AlignedRow {
+  readonly cells: readonly string[];
+  /**
+   * Extra text placed in the leftmost slot of the row.
+   *
+   * It is added as the *last* logical cell so it lands on the left of the row
+   * and leaves the other columns where the rows above have them. The slot is
+   * reserved in every row of the table, so a label never shifts the columns.
+   */
+  readonly trailing?: string;
+}
+
+/**
+ * Renders a table of fixed-width cells, laid out right-to-left.
+ *
+ * The cells are written in logical order and the whole table is wrapped in a
+ * right-to-left isolate, so the first cell of every row ends up on the right
+ * and the rows read right-to-left. Column widths are computed across the whole
+ * table, so a row of letters and a row of numbers line up column for column,
+ * and every row ends up with the same total width — which is what keeps the
+ * right edges of the rows in the same place.
+ */
+export function renderAlignedTable(
+  rows: readonly AlignedRow[],
+  options: AlignedTableOptions = {}
+): string[] {
+  const { cellWidth = 4, separator = " " } = options;
+  const columnCount = rows.reduce(
+    (max, row) => Math.max(max, row.cells.length),
+    0
+  );
+  const labelWidth = rows.reduce(
+    (max, row) => Math.max(max, displayWidth(row.trailing ?? "")),
+    0
+  );
+
+  const widths = Array.from({ length: columnCount }, (_, column) =>
+    rows.reduce(
+      (max, row) => Math.max(max, displayWidth(row.cells[column] ?? "")),
+      cellWidth
+    )
+  );
+
+  return rows.map((row) => {
+    const cells = widths.map((width, column) => {
+      const cell = row.cells[column] ?? "";
+      return cell + " ".repeat(Math.max(0, width - displayWidth(cell)));
+    });
+    const trailing = row.trailing ?? "";
+    const label =
+      trailing + " ".repeat(Math.max(0, labelWidth - displayWidth(trailing)));
+    return isolateRtl([...cells, label].join(separator));
+  });
+}
+
 /**
  * Renders a table as lines of text.
  *
@@ -111,6 +173,68 @@ export function renderTable(
     format(cells(headers)),
     format(widths.map((width) => "─".repeat(width))),
     ...rows.map((row) => format(cells(row)))
+  ];
+}
+
+/**
+ * Builds the step-by-step report of a value transfer between two alphabets.
+ *
+ * The rows are aligned column for column: the first character of the text sits
+ * on the right of every row, and the value under it is the value of that
+ * character.
+ */
+export function transferLines(
+  engine: ArabicEngine,
+  input: string,
+  sourceName = "standard",
+  targetName = "custom"
+): string[] {
+  const result = engine.transferValues(input, sourceName, targetName);
+  const characters = [...result.characters];
+  const values = result.values.map((value) =>
+    value === undefined ? "—" : String(value)
+  );
+  const targets = result.targets.map((target) => target ?? "—");
+  const targetText = targets.join(" ");
+
+  // All data rows share one layout, so every row ends up with the same width
+  // and the columns stay in the same place from step to step.
+  const rows = renderAlignedTable([
+    { cells: characters },
+    { cells: characters },
+    { cells: values },
+    { cells: characters },
+    { cells: values },
+    { cells: targets },
+    {
+      cells: engine.mirror(targetText, "standard").split(" "),
+      trailing: "standard"
+    },
+    {
+      cells: engine.mirror(targetText, "custom").split(" "),
+      trailing: "custom"
+    }
+  ]);
+
+  return [
+    heading("1 · المدخل"),
+    isolateRtl(input),
+    "",
+    heading("2 · الحروف الفريدة (بلا مسافات ولا تكرار)"),
+    rows[0] ?? "",
+    "",
+    heading(`3 · القيم في نظام ${result.source}`),
+    rows[1] ?? "",
+    rows[2] ?? "",
+    "",
+    heading(`4 · الحروف المقابلة في نظام ${result.target}`),
+    rows[3] ?? "",
+    rows[4] ?? "",
+    rows[5] ?? "",
+    "",
+    heading("5 · مرايا الناتج"),
+    rows[6] ?? "",
+    rows[7] ?? ""
   ];
 }
 
@@ -180,6 +304,7 @@ export function helpLines(): readonly string[] {
     "  /freq            frequency report     /reverse       reversed text",
     "  /alphabets       registered systems   /info <name>   letters, values, mirrors",
     "  /set <text>      set the text         /clear         clear the text",
+    "  /transfer [s] [t] carry values from one alphabet to another",
     "  /visual          visual-order reading of the text (diagnostic)",
     "  /help            this list            /quit          leave",
     "Type the text you want to analyse and press Enter — no command needed."
@@ -341,6 +466,15 @@ export function executeCommand(
           isolateRtl(toVisualOrder(currentText)),
           label("تنبيه", "الترتيب البصري للعرض فقط — لا يُطبَّق على نصوص منطقية")
         ]);
+
+      case "transfer": {
+        const [source = "standard", target = "custom"] = parsed.argument
+          .split(/\s+/u)
+          .filter((part) => part.length > 0);
+        resolve(engine, source);
+        resolve(engine, target);
+        return ok(transferLines(engine, currentText, source, target));
+      }
 
       case "":
         return ok([]);

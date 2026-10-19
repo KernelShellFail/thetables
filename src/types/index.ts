@@ -129,3 +129,24 @@ export interface ArabicEngineOptions {
   /** Extra alphabets registered after the built-ins. */
   readonly alphabets?: ReadonlyArray<AlphabetConfig>;
 }
+
+/**
+ * Result of carrying a text from one alphabet to another by numerical value.
+ *
+ * The pipeline is: distinct characters → their value in the source alphabet →
+ * the letter of the target alphabet that carries the same value.
+ */
+export interface ValueTransferResult {
+  /** The text the transfer started from. */
+  readonly input: string;
+  /** Name of the alphabet the values were read from. */
+  readonly source: string;
+  /** Name of the alphabet the letters were looked up in. */
+  readonly target: string;
+  /** Distinct characters of the input, without whitespace, in first-appearance order. */
+  readonly characters: readonly string[];
+  /** Value of each character in the source alphabet; `undefined` when unknown there. */
+  readonly values: readonly (number | undefined)[];
+  /** Letter of the target alphabet carrying the same value; `undefined` when there is none. */
+  readonly targets: readonly (string | undefined)[];
+}

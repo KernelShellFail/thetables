@@ -16,7 +16,8 @@ import {
   formatRun,
   helpLines,
   placeholder,
-  renderTable
+  renderTable,
+  transferLines
 } from "./interactive.js";
 import { isRtlText, isolateRtl, toVisualOrder } from "./utils/rtl.js";
 
@@ -129,6 +130,11 @@ function runDemo(): void {
   line("registered", engine.listAlphabetNames().join(", "));
   line("mirror ابت", engine.mirror("ابت", "demo"));
   line("value ابت", String(engine.calculate("ابت", "demo")));
+
+  section("9. Value transfer (standard → custom)");
+  for (const row of transferLines(engine, "كعبه كهان هي", "standard", "custom")) {
+    console.log(row);
+  }
 
   console.log(isolateRtl("\nانتهى العرض — جرّب الجلسة التفاعلية: npm start -- -i\n"));
 }

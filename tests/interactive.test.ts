@@ -148,6 +148,28 @@ describe("interactive · text and mirror commands", () => {
     expect(info).toContain("28");
     expect(info).toContain("س");
   });
+
+  it("runs the value transfer", () => {
+    const output = plain(
+      executeCommand(engine, "/transfer standard custom", "كعبه كهان هي")
+    );
+    expect(output).toContain("ك    ع    ب    ه    ا    ن    ي");
+    expect(output).toContain("20   70   2    5    1    50   10");
+    expect(output).toContain("ح    ن    و    ع    س    ف    ق");
+    expect(output).toContain("ت    غ    ر    ب    ا    ج    ه");
+    expect(output).toContain("ه    و    ن    ر    ص    ث    ط");
+  });
+
+  it("defaults the transfer to standard → custom", () => {
+    const output = plain(executeCommand(engine, "/transfer", "كعبه كهان هي"));
+    expect(output).toContain("ح    ن    و    ع    س    ف    ق");
+  });
+
+  it("reports an unknown alphabet in a transfer", () => {
+    const result = executeCommand(engine, "/transfer standard latin", "بسم");
+    expect(result.ok).toBe(false);
+    expect(plain(result)).toContain('Unknown alphabet "latin"');
+  });
 });
 
 describe("interactive · session control", () => {

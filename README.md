@@ -20,13 +20,16 @@ npm install
 npm run dev      # run the console demonstration (watch mode)
 npm run build    # compile to dist/ with declarations and source maps
 npm test         # run the test suite with Vitest
+npm run transfer # the value-transfer report (step by step)
 ```
 
 Other scripts: `npm start` (run the built demo), `npm run typecheck`, `npm run test:watch`.
 
 ```bash
-npm start -- -i    # interactive Arabic session
-npm start -- -h    # command overview
+npm start -- -i                  # interactive Arabic session
+npm start -- -h                  # command overview
+npm run transfer -- "كعبه كهان هي"
+npm run transfer -- "نص" custom standard   # swap the direction of the transfer
 ```
 
 > On Windows, run in a UTF-8 console (Windows Terminal, or `chcp 65001` first),
@@ -81,6 +84,7 @@ basit-arabic-engine/
 │   │   ├── unicode.ts         # code-point helpers
 │   │   └── rtl.ts             # bidirectional (right-to-left) helpers
 │   ├── interactive.ts         # Arabic presentation + REPL commands (pure)
+│   ├── transfer.ts            # value-transfer console report
 │   ├── index.ts               # every public export
 │   └── main.ts                # console demo + interactive session
 └── tests/
@@ -89,7 +93,8 @@ basit-arabic-engine/
     ├── abjad.test.ts
     ├── mirror.test.ts
     ├── rtl.test.ts
-    └── interactive.test.ts
+    ├── interactive.test.ts
+    └── transfer.test.ts
 ```
 
 The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`).
@@ -170,6 +175,8 @@ new ArabicEngine({ alphabets: [myConfig] });         // built-ins + extras
 | `calculateCharacter(char, name): number \| undefined` | Value of one character |
 | `calculateWords(text, name): WordResult[]` | Per-word value and character breakdown |
 | `breakdown(text, name): CharacterValue[]` | Per-character values of the whole text |
+| `findCharacterByValue(value, name): string \| undefined` | The letter carrying a given value |
+| `transferValues(text, source, target): ValueTransferResult` | Carries a text from one alphabet to another by value |
 | `mirror(text, name): string` | Mirrors every character |
 | `mirrorCharacter(char, name): string` | Mirrors one character |
 | `mirrorWords(text, name): string[]` | Mirrors each word |
@@ -319,6 +326,55 @@ import { executeCommand } from "basit-arabic-engine/dist/interactive.js"; // or 
 
 ---
 
+## Value transfer between alphabets
+
+The engine can carry a text from one alphabet to another **by numerical value**: read the
+value of every character in the source system, then look up the letter of the target system
+that carries the same value.
+
+```bash
+npm run transfer -- "كعبه كهان هي"
+```
+
+| Step | Result |
+| --- | --- |
+| 1 · the input | `كعبه كهان هي` |
+| 2 · distinct characters, no whitespace, no repeats | `ك ع ب ه ا ن ي` |
+| 3 · their value in `standard` | `20 70 2 5 1 50 10` |
+| 4 · the `custom` letter with the same value | `ح ن و ع س ف ق` |
+| 5 · the mirrors of that result | `ت غ ر ب ا ج ه` (standard) · `ه و ن ر ص ث ط` (custom) |
+
+Every row is laid out right-to-left with the columns aligned, so the value under a letter
+really is that letter's value:
+
+```text
+── 3 · القيم في نظام standard ──
+ك    ع    ب    ه    ا    ن    ي
+20   70   2    5    1    50   10
+
+── 4 · الحروف المقابلة في نظام custom ──
+ك    ع    ب    ه    ا    ن    ي
+20   70   2    5    1    50   10
+ح    ن    و    ع    س    ف    ق
+```
+
+The same pipeline is available as an API, in both directions and for any registered system:
+
+```typescript
+const result = engine.transferValues("كعبه كهان هي", "standard", "custom");
+
+result.characters; // ["ك", "ع", "ب", "ه", "ا", "ن", "ي"]
+result.values;     // [20, 70, 2, 5, 1, 50, 10]
+result.targets;    // ["ح", "ن", "و", "ع", "س", "ف", "ق"]
+
+engine.findCharacterByValue(20, "standard"); // "ك"
+engine.findCharacterByValue(20, "custom");  // "ح"
+```
+
+In the interactive session the same report is available as `/transfer [source] [target]`.
+
+---
+
 ## Extending
 
 **Register another system** — no existing class needs to change:
@@ -358,7 +414,7 @@ package and never re-implement the tables.
 npm test
 ```
 
-The suite (223 tests) verifies the **original data**, not the implementation: the expected
+The suite (245 tests) verifies the **original data**, not the implementation: the expected
 value and mirror tables are written out literally inside the test files, so a wrong mapping
 in `src/data/*` fails the tests. Covered:
 
@@ -378,6 +434,8 @@ in `src/data/*` fails the tests. Covered:
 13. bidirectional helpers: direction detection, isolation, bidi-mark stripping
 14. visual-order conversion, including round-trips and mixed Latin/Arabic runs
 15. every interactive command, its output, and the table renderer in both directions
+16. the value transfer: characters, values, matched letters, mirrors in both systems,
+    and the column alignment of the report
 
 ---
 
