@@ -1,5 +1,5 @@
 import type { Alphabet } from "../core/Alphabet.js";
-import { toCharacters } from "../utils/unicode.js";
+import { isWhitespace, toCharacters } from "../utils/unicode.js";
 
 /**
  * Mirror transformations.
@@ -32,5 +32,15 @@ export class MirrorProcessor {
       .split(/\s+/u)
       .filter((word) => word.length > 0)
       .map((word) => this.mirrorText(word, alphabet));
+  }
+
+  /**
+   * Mirrors every letter of a text and returns the letters, whitespace
+   * ignored. Letters without a mirror are kept.
+   */
+  mirrorLetters(text: string, alphabet: Alphabet): string[] {
+    return toCharacters(text)
+      .filter((character) => !isWhitespace(character))
+      .map((character) => this.mirrorCharacter(character, alphabet));
   }
 }

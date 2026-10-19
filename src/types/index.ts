@@ -150,3 +150,24 @@ export interface ValueTransferResult {
   /** Letter of the target alphabet carrying the same value; `undefined` when there is none. */
   readonly targets: readonly (string | undefined)[];
 }
+
+/**
+ * The mirrors of a text in two systems, plus the two rows interleaved.
+ *
+ * `merged` alternates between the two systems: one letter from the first, one
+ * from the second, and so on.
+ */
+export interface MirrorPairResult {
+  /** The text that was mirrored. */
+  readonly text: string;
+  /** Name of the first system. */
+  readonly first: string;
+  /** Name of the second system. */
+  readonly second: string;
+  /** Mirrors of the text in the first system, in order. */
+  readonly firstLetters: readonly string[];
+  /** Mirrors of the text in the second system, in order. */
+  readonly secondLetters: readonly string[];
+  /** The two mirror rows interleaved. */
+  readonly merged: readonly string[];
+}

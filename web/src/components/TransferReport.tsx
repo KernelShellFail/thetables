@@ -14,8 +14,7 @@ import { Grid, Step } from "./Layout";
 export function TransferReport({ text }: { readonly text: string }) {
   const result = engine.transferValues(text, "standard", "custom");
   const targetText = result.targets.join(" ");
-  const standardMirrors = engine.mirror(targetText, "standard").split(" ");
-  const customMirrors = engine.mirror(targetText, "custom").split(" ");
+  const pair = engine.mirrorPair(targetText);
 
   return (
     <div className="stack">
@@ -63,12 +62,12 @@ export function TransferReport({ text }: { readonly text: string }) {
         <div className="stack">
           <div>
             <p className="sub tag-line">
-              <span className="tag">standard</span>
+              <span className="tag">{pair.first}</span>
             </p>
             <Grid
               className="grid--fixed"
               rows={[
-                standardMirrors.map((mirror) => (
+                pair.firstLetters.map((mirror) => (
                   <span className="letter">{mirror}</span>
                 ))
               ]}
@@ -76,12 +75,12 @@ export function TransferReport({ text }: { readonly text: string }) {
           </div>
           <div>
             <p className="sub tag-line">
-              <span className="tag">custom</span>
+              <span className="tag">{pair.second}</span>
             </p>
             <Grid
               className="grid--fixed"
               rows={[
-                customMirrors.map((mirror) => (
+                pair.secondLetters.map((mirror) => (
                   <span className="letter">{mirror}</span>
                 ))
               ]}
@@ -90,6 +89,18 @@ export function TransferReport({ text }: { readonly text: string }) {
         </div>
         <p className="note">
           المرآة ثنائية الاتجاه: تطبيقها مرتين يعيد النص الأصلي.
+        </p>
+      </Step>
+
+      <Step number={6} title="الدمج (تتناوب بين المرآتين)">
+        <Grid
+          className="grid--fixed grid--compact"
+          rows={[
+            pair.merged.map((letter) => <span className="letter">{letter}</span>)
+          ]}
+        />
+        <p className="note">
+          حرف من مرآة {pair.first} ثم حرف من مرآة {pair.second}، بالترتيب.
         </p>
       </Step>
     </div>

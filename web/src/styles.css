@@ -373,6 +373,13 @@ body {
   min-width: 3.6rem;
 }
 
+/* A row with twice as many cells needs narrower columns to stay compact. */
+.grid--compact th,
+.grid--compact td {
+  width: 2.6rem;
+  min-width: 2.6rem;
+}
+
 .tag-line {
   margin: 0 0 6px;
 }

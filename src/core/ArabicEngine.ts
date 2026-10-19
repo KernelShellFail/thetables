@@ -5,6 +5,7 @@ import type {
   CharacterValue,
   DuplicateResult,
   FrequencyEntry,
+  MirrorPairResult,
   RemovePunctuationOptions,
   TextAnalysis,
   ValueTransferResult,
@@ -242,6 +243,48 @@ export class ArabicEngine {
   /** Mirrors a single character. */
   mirrorCharacter(char: string, alphabetName: string): string {
     return this.#mirror.mirrorCharacter(char, this.getAlphabet(alphabetName));
+  }
+
+  /**
+   * Merges two texts by taking one letter from the first, then one from the
+   * second, and repeating. Whitespace is ignored.
+   */
+  interleave(first: string, second: string): string {
+    return this.#text.interleave(first, second);
+  }
+
+  /**
+   * The mirrors of a text in two systems, plus the two rows interleaved.
+   *
+   * ```typescript
+   * const pair = engine.mirrorPair("ح ن و ع س ف ق");
+   * pair.firstLetters;  // ["ت", "غ", "ر", "ب", "ا", "ج", "ه"]
+   * pair.secondLetters; // ["ه", "و", "ن", "ر", "ص", "ث", "ط"]
+   * pair.merged;        // ["ت", "ه", "غ", "و", "ر", "ن", "ب", "ر", "ا", "ص", "ج", "ث", "ه", "ط"]
+   * ```
+   */
+  mirrorPair(
+    text: string,
+    firstName = "standard",
+    secondName = "custom"
+  ): MirrorPairResult {
+    const first = this.getAlphabet(firstName);
+    const second = this.getAlphabet(secondName);
+
+    const firstLetters = this.#mirror.mirrorLetters(text, first);
+    const secondLetters = this.#mirror.mirrorLetters(text, second);
+    const merged = this.#text
+      .interleave(firstLetters.join(" "), secondLetters.join(" "))
+      .split("");
+
+    return {
+      text,
+      first: first.name,
+      second: second.name,
+      firstLetters,
+      secondLetters,
+      merged
+    };
   }
 
   /** Mirrors each whitespace-delimited word independently. */

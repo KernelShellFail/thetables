@@ -65,7 +65,9 @@ export type {
   FrequencyEntry,
   LetterMirror,
   LetterValue,
+  MirrorPairResult,
   RemovePunctuationOptions,
   TextAnalysis,
+  ValueTransferResult,
   WordResult
 } from "./types/index.js";

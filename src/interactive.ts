@@ -195,7 +195,7 @@ export function transferLines(
     value === undefined ? "—" : String(value)
   );
   const targets = result.targets.map((target) => target ?? "—");
-  const targetText = targets.join(" ");
+  const pair = engine.mirrorPair(targets.join(" "));
 
   // All data rows share one layout, so every row ends up with the same width
   // and the columns stay in the same place from step to step.
@@ -207,14 +207,19 @@ export function transferLines(
     { cells: values },
     { cells: targets },
     {
-      cells: engine.mirror(targetText, "standard").split(" "),
-      trailing: "standard"
+      cells: [...pair.firstLetters],
+      trailing: pair.first
     },
     {
-      cells: engine.mirror(targetText, "custom").split(" "),
-      trailing: "custom"
+      cells: [...pair.secondLetters],
+      trailing: pair.second
     }
   ]);
+
+  // The merged row is twice as long, so it gets its own table.
+  const merged = renderAlignedTable([{ cells: [...pair.merged] }], {
+    cellWidth: 3
+  });
 
   return [
     heading("1 · المدخل"),
@@ -234,7 +239,10 @@ export function transferLines(
     "",
     heading("5 · مرايا الناتج"),
     rows[6] ?? "",
-    rows[7] ?? ""
+    rows[7] ?? "",
+    "",
+    heading("6 · الدمج (تتناوب بين المرآتين)"),
+    merged[0] ?? ""
   ];
 }
 

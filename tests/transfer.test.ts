@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ArabicEngine, Alphabet, stripBidiControls } from "../src/index.js";
+import { ArabicEngine, Alphabet, TextProcessor, stripBidiControls } from "../src/index.js";
 import { renderAlignedTable, transferLines } from "../src/interactive.js";
 
 /**
@@ -90,6 +90,64 @@ describe("ArabicEngine · transferValues", () => {
   });
 });
 
+describe("TextProcessor · interleave", () => {
+  const processor = new TextProcessor();
+
+  it("takes one letter from the first, then one from the second", () => {
+    expect(processor.interleave("abc", "123")).toBe("a1b2c3");
+  });
+
+  it("merges the two mirror rows of the example", () => {
+    expect(processor.interleave("ت غ ر ب ا ج ه", "ه و ن ر ص ث ط")).toBe(
+      "تهغورنبراصجثهط"
+    );
+  });
+
+  it("ignores whitespace", () => {
+    expect(processor.interleave("a b", "c d")).toBe("acbd");
+    expect(processor.interleave("  ab  ", "  cd  ")).toBe("acbd");
+  });
+
+  it("appends the remainder of the longer text", () => {
+    expect(processor.interleave("abcd", "xy")).toBe("axbycd");
+    expect(processor.interleave("xy", "abcd")).toBe("xaybcd");
+  });
+
+  it("handles empty input", () => {
+    expect(processor.interleave("", "")).toBe("");
+    expect(processor.interleave("abc", "")).toBe("abc");
+    expect(processor.interleave("", "abc")).toBe("abc");
+  });
+});
+
+describe("ArabicEngine · mirrorPair", () => {
+  it("returns both mirror rows and their merge", () => {
+    const pair = engine.mirrorPair("ح ن و ع س ف ق");
+
+    expect(pair.first).toBe("standard");
+    expect(pair.second).toBe("custom");
+    expect(pair.firstLetters).toEqual(["ت", "غ", "ر", "ب", "ا", "ج", "ه"]);
+    expect(pair.secondLetters).toEqual(["ه", "و", "ن", "ر", "ص", "ث", "ط"]);
+    expect(pair.merged).toEqual([
+      "ت", "ه", "غ", "و", "ر", "ن", "ب", "ر", "ا", "ص", "ج", "ث", "ه", "ط"
+    ]);
+  });
+
+  it("merges exactly as the specification states", () => {
+    const pair = engine.mirrorPair("ح ن و ع س ف ق");
+    expect(pair.merged.join(" ")).toBe("ت ه غ و ر ن ب ر ا ص ج ث ه ط");
+  });
+
+  it("can merge in the other order", () => {
+    const pair = engine.mirrorPair("ح ن و ع س ف ق", "custom", "standard");
+    expect(pair.merged.join(" ")).toBe("ه ت و غ ن ر ر ب ص ا ث ج ط ه");
+  });
+
+  it("exposes the interleave on the engine", () => {
+    expect(engine.interleave("abc", "123")).toBe("a1b2c3");
+  });
+});
+
 describe("transferLines · step by step report", () => {
   const lines = transferLines(engine, INPUT, "standard", "custom");
   const plain = lines.map((line) => stripBidiControls(line));
@@ -117,6 +175,16 @@ describe("transferLines · step by step report", () => {
   it("shows the mirrors of the result in both systems", () => {
     expect(plain).toContain(row(["ت", "غ", "ر", "ب", "ا", "ج", "ه"], "standard"));
     expect(plain).toContain(row(["ه", "و", "ن", "ر", "ص", "ث", "ط"], "custom"));
+  });
+
+  it("shows the merged row of both mirrors", () => {
+    // The merged row is twice as long, so it gets its own narrower table.
+    const merged = [
+      "ت", "ه", "غ", "و", "ر", "ن", "ب", "ر", "ا", "ص", "ج", "ث", "ه", "ط"
+    ]
+      .map((cell) => cell.padEnd(3))
+      .join(" ") + " ";
+    expect(plain).toContain(merged);
   });
 
   it("keeps every data row the same width so the columns stay aligned", () => {

@@ -121,4 +121,34 @@ export class TextProcessor {
       .filter((char) => !isWhitespace(char) && !isPunctuation(char))
       .join("");
   }
+
+  /**
+   * Merges two texts by taking one letter from the first, then one from the
+   * second, and repeating.
+   *
+   * Only the letters are interleaved — whitespace is ignored — so the result is
+   * a clean sequence. When one text is shorter, the remaining letters of the
+   * longer one are appended.
+   *
+   * ```typescript
+   * interleave("ت غ ر ب", "ه و ن ر"); // "تهغورنبر"
+   * ```
+   */
+  interleave(first: string, second: string): string {
+    const letters = (text: string): string[] =>
+      toCharacters(text).filter((character) => !isWhitespace(character));
+
+    const fromFirst = letters(first);
+    const fromSecond = letters(second);
+    const merged: string[] = [];
+
+    for (let index = 0; index < Math.max(fromFirst.length, fromSecond.length); index += 1) {
+      const first = fromFirst[index];
+      if (first !== undefined) merged.push(first);
+      const second = fromSecond[index];
+      if (second !== undefined) merged.push(second);
+    }
+
+    return merged.join("");
+  }
 }
