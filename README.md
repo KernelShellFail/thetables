@@ -1,0 +1,284 @@
+# Basit Arabic Engine
+
+A small, dependable TypeScript library for Arabic text processing, Abjad calculation and
+mirror transformation.
+
+- Strict TypeScript, ES modules, zero runtime dependencies
+- Two original alphabet systems shipped verbatim (`standard`, `custom`)
+- Immutable, validated alphabet data — your data is never rewritten
+- Unicode-correct: iterates code points, never normalises or strips diacritics
+- Runs anywhere JavaScript runs (Node, browsers, workers) — the library uses no Node APIs
+
+---
+
+## Requirements
+
+Node.js 18 or newer.
+
+```bash
+npm install
+npm run dev      # run the console demonstration (watch mode)
+npm run build    # compile to dist/ with declarations and source maps
+npm test         # run the test suite with Vitest
+```
+
+Other scripts: `npm start` (run the built demo), `npm run typecheck`, `npm run test:watch`.
+
+---
+
+## Quick start
+
+```typescript
+import { ArabicEngine } from "basit-arabic-engine";
+
+const engine = new ArabicEngine(); // "standard" and "custom" are already registered
+
+const input = "بسم الله الرحمن الرحيم";
+
+engine.removeDuplicates(input);      // "بسم الهرحني"
+engine.calculate(input, "standard"); // 786
+engine.calculate(input, "custom");   // 1260
+engine.mirror(input, "standard");    // "عاظ سضضق سضوتظغ سضوتخظ"
+engine.mirror(input, "custom");      // "ظصك ذغغح ذغعهكو ذغعهيك"
+engine.frequencies(input);           // [{ character: "ل", count: 4, ratio: 0.181818 }, …]
+```
+
+`ArabicEngine` is the only object you need: it owns the alphabet registry and composes the
+three processors internally.
+
+---
+
+## Project structure
+
+```text
+basit-arabic-engine/
+├── package.json
+├── tsconfig.json
+├── README.md
+├── src/
+│   ├── core/
+│   │   ├── Alphabet.ts        # one alphabet system: values + mirrors
+│   │   └── ArabicEngine.ts    # facade / registry / public API
+│   ├── processors/
+│   │   ├── TextProcessor.ts   # duplicates, counts, frequencies, whitespace
+│   │   ├── AbjadCalculator.ts # totals, words, characters
+│   │   └── MirrorProcessor.ts # character / word / sentence mirroring
+│   ├── data/
+│   │   ├── standard.ts        # System 1 — original data
+│   │   └── custom.ts          # System 2 — original data
+│   ├── types/
+│   │   └── index.ts           # all shared interfaces and type aliases
+│   ├── utils/
+│   │   └── unicode.ts         # code-point helpers
+│   ├── index.ts               # every public export
+│   └── main.ts                # console demonstration
+└── tests/
+    ├── alphabet.test.ts
+    ├── text.test.ts
+    ├── abjad.test.ts
+    └── mirror.test.ts
+```
+
+The library (`src/index.ts`) is completely separate from the console demo (`src/main.ts`).
+
+---
+
+## Data integrity
+
+The two original systems are stored exactly as supplied and are protected at runtime:
+
+| Rule | How it is enforced |
+| --- | --- |
+| Characters, positions and values are never changed | Tables are `Object.freeze`d on load and copied into private maps inside `Alphabet` |
+| `ى` is never replaced with `ي` | No normalisation exists anywhere in the pipeline; `ى` (U+0649) and `ي` (U+064A) stay distinct letters of distinct systems |
+| No automatic normalisation | Every text operation iterates code points and returns them unchanged |
+| The two systems stay independent | Each `Alphabet` owns its own maps; nothing is shared or derived between them |
+| Mirrors work in both directions | Pairs are stored explicitly and applied as `a→b` **and** `b→a`, so mirroring twice always restores the original |
+| Insertion order is preserved | `getLetters()` and `getEntries()` return the original order |
+| Mirror mappings are stored explicitly | They are never inferred from positions in the value table |
+| Duplicate / inconsistent data is rejected | The constructor throws `AlphabetError` on duplicate letters, unknown mirrored letters, self-mirroring letters and conflicting pairs |
+| Registered data cannot be mutated | Lookup structures are private; getters return frozen arrays and copies |
+
+### System 1 — `standard`
+
+| ا | ب | ج | د | ه | و | ز | ح | ط | ي | ك | ل | م |
+| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 20 | 30 | 40 |
+
+| ن | س | ع | ف | ص | ق | ر | ش | ت | ث | خ | ذ | ض | ظ | غ |
+| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| 50 | 60 | 70 | 80 | 90 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 1000 |
+
+Mirrors: `ا⇄س`, `ب⇄ع`, `ج⇄ف`, `د⇄ص`, `ه⇄ق`, `و⇄ر`, `ز⇄ش`, `ح⇄ت`, `ط⇄ث`, `ي⇄خ`, `ك⇄ذ`, `ل⇄ض`, `م⇄ظ`, `ن⇄غ`
+
+### System 2 — `custom`
+
+| س | و | ا | ل | ع | ظ | ى | م | خ | ق | ح | ز | ت | ف |
+| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 20 | 30 | 40 | 50 |
+
+| ص | ن | ذ | غ | ر | ب | ش | ك | ض | ط | ه | ج | د | ث |
+| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| 60 | 70 | 80 | 90 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 1000 |
+
+Mirrors: `س⇄ص`, `و⇄ن`, `ا⇄ذ`, `ل⇄غ`, `ع⇄ر`, `ظ⇄ب`, `ى⇄ش`, `م⇄ك`, `خ⇄ض`, `ق⇄ط`, `ح⇄ه`, `ز⇄ج`, `ت⇄د`, `ف⇄ث`
+
+---
+
+## API
+
+### `ArabicEngine`
+
+```typescript
+new ArabicEngine();                                  // built-ins only
+new ArabicEngine({ useBuiltInAlphabets: false });    // empty registry
+new ArabicEngine({ alphabets: [myConfig] });         // built-ins + extras
+```
+
+| Method | Purpose |
+| --- | --- |
+| `register(config \| Alphabet): Alphabet` | Register an alphabet; throws on a duplicate name |
+| `hasAlphabet(name): boolean` | Registry check |
+| `getAlphabet(name): Alphabet` | Throws `AlphabetError` with the known names when missing |
+| `listAlphabetNames(): readonly string[]` | Registered names, in registration order |
+| `listAlphabets(): readonly Alphabet[]` | Registered alphabets |
+| `describeAlphabet(name): AlphabetInfo` | Immutable snapshot for UIs and exports |
+| `removeDuplicates(text): string` | Global duplicate removal, first occurrence wins |
+| `removeDuplicatesDetailed(text): DuplicateResult` | Same, plus removed characters |
+| `uniqueCharacters(text): string[]` | Distinct characters, first-appearance order |
+| `countCharacters(text): number` | Number of code points |
+| `frequencies(text): FrequencyEntry[]` | Counts and ratios, sorted by count |
+| `frequencyMap(text): ReadonlyMap<string, number>` | Counts in first-appearance order |
+| `reverse(text): string` | Reversal by code point |
+| `removeWhitespace(text): string` | Drops all whitespace |
+| `removePunctuation(text, options?): string` | Drops `\p{P}`, plus `options.additionalCharacters` |
+| `removeSpacesAndPunctuation(text): string` | Both of the above in one pass |
+| `calculate(text, name): number` | Total Abjad value |
+| `calculateCharacter(char, name): number \| undefined` | Value of one character |
+| `calculateWords(text, name): WordResult[]` | Per-word value and character breakdown |
+| `breakdown(text, name): CharacterValue[]` | Per-character values of the whole text |
+| `mirror(text, name): string` | Mirrors every character |
+| `mirrorCharacter(char, name): string` | Mirrors one character |
+| `mirrorWords(text, name): string[]` | Mirrors each word |
+| `analyze(text, name): TextAnalysis` | Values, mirrors, frequencies and duplicates in one pass |
+
+### `Alphabet`
+
+```typescript
+const alphabet = new Alphabet({
+  name: "my-system",
+  values: [["ا", 1], ["ب", 2]],
+  mirrors: [["ا", "ب"]]
+});
+
+alphabet.getValue("ب");       // 2
+alphabet.getMirror("ا");      // "ب"  (and getMirror("ب") === "ا")
+alphabet.getPosition("ب");    // 1
+alphabet.contains("ج");       // false
+alphabet.getLetters();        // frozen, original order
+alphabet.getEntries();        // frozen [letter, value] pairs
+alphabet.getMirrorPairs();    // frozen pairs, declaration order
+alphabet.getUnmirroredLetters();
+alphabet.info();              // AlphabetInfo snapshot
+```
+
+### Processors
+
+`TextProcessor`, `AbjadCalculator` and `MirrorProcessor` are public and usable on their own
+if you need them without the registry — each takes an `Alphabet` directly:
+
+```typescript
+import { TextProcessor } from "basit-arabic-engine";
+
+new TextProcessor().removeDuplicates("abbccdefffa"); // "abcdef"
+```
+
+---
+
+## Behaviour notes
+
+**Duplicate removal is global and keeps the first occurrence.** `abbccdefffa` → `abcdef`.
+Because the rule is strictly "first occurrence wins", `"life is a lie"` → `"life sa"`: the
+whole word `life` survives, the repeated `i` is dropped from `is`, and the repeated spaces
+collapse into the first one. (The `lfe is a` variant quoted in the original brief keeps a
+*later* `i` and later spaces, which contradicts first-occurrence removal — this library
+follows the stated rule.)
+
+**Unknown characters are ignored, never fatal.** Letters missing from the chosen alphabet,
+digits, punctuation and whitespace contribute `0` to a total, so mixed-language input works.
+They are still visible in `breakdown()`, `calculateWords()` and `analyze()` as
+`{ character: "ي", value: undefined }`, so nothing is silently hidden.
+
+**Nothing is normalised and no diacritic is ever removed.** `بَسْم` keeps its marks; the bare
+letters are what the alphabets can value. Every calculation iterates Unicode code points
+(`Array.from(text)`, `for…of`), so astral characters such as emoji are treated as one
+character, never as two UTF-16 code units.
+
+**Mirroring preserves everything it does not know.** Spaces, punctuation, diacritics and
+unknown letters pass through unchanged, and because mirrors are stored in both directions,
+`mirror(mirror(text)) === text`.
+
+---
+
+## Extending
+
+**Register another system** — no existing class needs to change:
+
+```typescript
+engine.register({
+  name: "abgata",
+  values: [["ا", 1], ["ب", 3], ["ج", 3], ["د", 3]],
+  mirrors: [["ب", "ج"]]
+});
+
+engine.calculate("ابج", "abgata"); // 7
+engine.mirror("ابج", "abgata");   // "اجب"
+```
+
+Invalid data fails fast and loudly:
+
+```typescript
+engine.register({ name: "broken", values: [["ا", 1], ["ا", 2]], mirrors: [] });
+// AlphabetError: Alphabet "broken": duplicate value entry for "ا".
+```
+
+**Add capabilities without touching the core.** The processors are independent and stateless,
+so a new concern (diacritics handling, numerical roots, JSON/CSV export, pipelines) is a new
+class that consumes `TextProcessor` / `AbjadCalculator` / `MirrorProcessor` — for example a
+`withDiacritics` pipeline or a `toCsv(analysis: TextAnalysis)` exporter. Normalisation and
+grapheme segmentation are deliberately *not* implemented, but `utils/unicode.ts` already
+exposes `toCharacters`, `isArabicLetter` and `isDiacritic` so such an option can be added as
+an input parameter rather than a rewrite. UI layers (web, REST, desktop) should depend on the
+package and never re-implement the tables.
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+The suite (171 tests) verifies the **original data**, not the implementation: the expected
+value and mirror tables are written out literally inside the test files, so a wrong mapping
+in `src/data/*` fails the tests. Covered:
+
+1. all 28 standard values, in order, with positions
+2. all 28 custom values, in order, with positions
+3. every mirror pair in both directions, in both systems
+4. double-mirroring restoration
+5. English and Arabic duplicate removal, including `abbccdefffa` → `abcdef`
+6. empty strings, whitespace and punctuation
+7. unknown characters and non-Arabic input
+8. alphabet registration, duplicate registration and invalid definitions
+9. conflicting, self-referencing and unknown mirror declarations
+10. immutability of the source tables and of every lookup structure
+11. correct, non-substituted handling of `ى` versus `ي`
+12. the reference input `"بسم الله الرحمن الرحيم"` = **786** in the standard system
+    (102 + 66 + 329 + 289) and 1260 in the custom system
+
+---
+
+## License
+
+MIT
