@@ -604,6 +604,23 @@ in `src/data/*` fails the tests. Covered:
 
 ---
 
+## Deployment
+
+### GitHub Pages (Automated via GitHub Actions)
+
+The repository includes a ready-to-run GitHub Actions workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) that:
+1. Validates the codebase (`npm run typecheck` and `npm test`).
+2. Builds the core TypeScript engine and the Vite web application.
+3. Automatically deploys the interactive web app to **GitHub Pages** on every push to `master` / `main`.
+
+#### Enabling GitHub Pages on your repository:
+1. Push your repository to GitHub.
+2. In your repository on GitHub, navigate to **Settings** → **Pages**.
+3. Under **Build and deployment** → **Source**, select **GitHub Actions**.
+4. Future pushes to `master` / `main` will automatically build and publish the web interface.
+
+---
+
 ## License
 
 MIT

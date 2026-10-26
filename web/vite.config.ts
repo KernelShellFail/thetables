@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
+  base: "./",
   plugins: [react()],
   resolve: {
     // The web app uses the library source directly, so changes to the engine
